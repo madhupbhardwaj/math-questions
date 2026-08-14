@@ -6,6 +6,7 @@
   --text: #ededed;
   --text-dim: #8a8a92;
   --text-faint: #55555c;
+  --nav-bg: rgba(10,10,11,0.8);
   --accent-nt: #6c8fff;   /* number theory — indigo */
   --accent-trig: #ff8a5c; /* trigonometry — amber-coral */
   --accent-calc: #7ee08c; /* calculus — mint green */
@@ -14,6 +15,25 @@
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --sans: 'Inter', -apple-system, sans-serif;
 }
+
+html[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-elevated: #f5f5f7;
+  --border: #e4e4e7;
+  --border-hover: #d1d1d6;
+  --text: #18181b;
+  --text-dim: #6b6b73;
+  --text-faint: #9a9aa2;
+  --nav-bg: rgba(255,255,255,0.82);
+  --accent-nt: #4a68e0;
+  --accent-trig: #e06a34;
+  --accent-calc: #2f9e52;
+  --accent-comb: #a34fe0;
+  --accent-alg: #c98a00;
+}
+
+html[data-theme="light"] ::selection { color: #ffffff; }
+html[data-theme="light"] .q-answer-inner { background: var(--bg-elevated); }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -38,9 +58,9 @@ nav {
   z-index: 50;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 20px;
   padding: 16px 32px;
-  background: rgba(10,10,11,0.8);
+  background: var(--nav-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
@@ -67,6 +87,7 @@ nav {
   display: flex;
   align-items: baseline;
   gap: 10px;
+  margin-right: auto;
 }
 .signature {
   font-family: 'Impact', 'Haettenschweiler', 'Arial Narrow Bold', sans-serif;
@@ -103,6 +124,12 @@ nav {
   pointer-events: none;
 }
 
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .menu-toggle {
   display: none;
   background: none;
@@ -112,6 +139,27 @@ nav {
   color: var(--text);
   cursor: pointer;
 }
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+.theme-toggle .icon-sun { display: none; }
+html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
 
 /* ---------- HERO ---------- */
 .hero {
@@ -472,15 +520,15 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   top: 0; left: 0;
   width: 10px; height: 10px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--text);
   box-shadow:
-    0 0 8px 2px rgba(255,255,255,0.9),
-    0 0 20px 6px rgba(255,255,255,0.35),
-    0 0 36px 12px rgba(255,255,255,0.12);
+    0 0 8px 2px color-mix(in srgb, var(--text) 90%, transparent),
+    0 0 20px 6px color-mix(in srgb, var(--text) 35%, transparent),
+    0 0 36px 12px color-mix(in srgb, var(--text) 12%, transparent);
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
-  transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease;
+  transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease, background 0.2s ease;
   opacity: 0;
 }
 .cursor-glow.visible { opacity: 1; }
