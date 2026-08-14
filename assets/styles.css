@@ -330,7 +330,7 @@ h1 .accent { color: var(--accent-eyebrow, var(--accent-nt)); }
   border: none;
   transition: all 0.15s;
 }
-.pill.active { background: #1c1c1f; color: var(--text); }
+.pill.active { background: #1c1c1f; color: #ededed; }
 .pill:hover:not(.active) { color: var(--text); }
 
 /* ---------- SECTIONS / QUESTIONS ---------- */
