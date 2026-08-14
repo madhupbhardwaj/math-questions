@@ -96,11 +96,39 @@ function buildDataFromRows(rows) {
   return data;
 }
 
+const CACHE_KEY = "problemset_cache_v1";
+
+async function fetchCsvWithRetry(retries = 2, delayMs = 800) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      if (!text || text.trim().length === 0) throw new Error("Empty response");
+      return text;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+}
+
 async function loadData() {
-  const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-  const csvText = await res.text();
-  const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-  return buildDataFromRows(parsed.data);
+  try {
+    const csvText = await fetchCsvWithRetry();
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const data = buildDataFromRows(parsed.data);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+    return data;
+  } catch (err) {
+    // Live fetch failed even after retries — fall back to last known-good data if we have it
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      console.warn("Live fetch failed, showing cached data:", err);
+      return JSON.parse(cached);
+    }
+    throw err;
+  }
 }
 
 function waitForLibs(callback) {
@@ -326,4 +354,26 @@ function initMobileMenu() {
   const links = document.querySelector('.nav-links');
   if (!btn || !links) return;
   btn.addEventListener('click', () => links.classList.toggle('open'));
+}
+
+// ============================================================
+// LIGHT/DARK THEME TOGGLE
+// Call initThemeToggle() from every page's inline script.
+// Preference is saved in localStorage and applied instantly
+// on future visits via the anti-flash script in <head>.
+// ============================================================
+function initThemeToggle() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (isLight) {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('problemset_theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('problemset_theme', 'light');
+    }
+  });
 }
