@@ -296,7 +296,7 @@ function initLandingPage() {
       Object.values(TOPICS).forEach(topic => {
         const count = data[topic.key] ? data[topic.key].questions.length : 0;
         const card = document.createElement('a');
-        card.href = `${topic.key}.html`;
+        card.href = `${topic.key}/`;
         card.className = 'topic-card';
         card.style.setProperty('--card-accent', topic.accent);
         card.innerHTML = `
