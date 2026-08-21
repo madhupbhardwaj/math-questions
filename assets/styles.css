@@ -402,6 +402,25 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 .q-text { font-size: 15px; font-weight: 500; line-height: 1.55; overflow-x: auto; }
 .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; }
 .katex { white-space: normal; }
+
+/* Custom thin scrollbar for overflowing equations — minimal, matches theme */
+.q-text, .katex-display {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--border) transparent;
+}
+.q-text::-webkit-scrollbar, .katex-display::-webkit-scrollbar {
+  height: 3px;
+}
+.q-text::-webkit-scrollbar-track, .katex-display::-webkit-scrollbar-track {
+  background: transparent;
+}
+.q-text::-webkit-scrollbar-thumb, .katex-display::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.q-text:hover::-webkit-scrollbar-thumb, .katex-display:hover::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+}
 .q-image {
   max-width: 100%;
   max-height: 260px;
