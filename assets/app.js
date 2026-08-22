@@ -377,3 +377,18 @@ function initThemeToggle() {
     }
   });
 }
+
+// ============================================================
+// TAB-AWAY TITLE MESSAGE
+// Changes the browser tab title when the user switches away,
+// and restores the original title when they come back.
+// Call initTabAwayMessage() from every page's inline script.
+// ============================================================
+function initTabAwayMessage(message) {
+  const originalTitle = document.title;
+  const awayMessage = message || "Come back! 👋";
+
+  document.addEventListener('visibilitychange', () => {
+    document.title = document.hidden ? awayMessage : originalTitle;
+  });
+}
