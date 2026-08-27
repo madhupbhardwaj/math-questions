@@ -381,14 +381,20 @@ function initThemeToggle() {
 // ============================================================
 // TAB-AWAY TITLE MESSAGE
 // Changes the browser tab title when the user switches away,
-// and restores the original title when they come back.
-// Call initTabAwayMessage() from every page's inline script.
+// picking a random message each time, and restores the
+// original title when they come back.
+// Call initTabAwayMessage(["msg1", "msg2", "msg3"]) from every page.
 // ============================================================
-function initTabAwayMessage(message) {
+function initTabAwayMessage(messages) {
   const originalTitle = document.title;
-  const awayMessage = message || "Come back! 👋";
+  const list = (messages && messages.length) ? messages : ["Come back! 👋"];
 
   document.addEventListener('visibilitychange', () => {
-    document.title = document.hidden ? awayMessage : originalTitle;
+    if (document.hidden) {
+      const pick = list[Math.floor(Math.random() * list.length)];
+      document.title = pick;
+    } else {
+      document.title = originalTitle;
+    }
   });
 }
