@@ -324,6 +324,7 @@ function initCursorGlow() {
   const dot = document.createElement('div');
   dot.className = 'cursor-glow';
   document.body.appendChild(dot);
+  document.documentElement.classList.add('cursor-ready');
 
   let x = 0, y = 0;
   document.addEventListener('mousemove', (e) => {
