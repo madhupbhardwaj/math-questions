@@ -531,8 +531,8 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 
 /* ---------- CUSTOM CURSOR ---------- */
 @media (pointer: fine) {
-  body { cursor: none; }
-  a, button, .q-item, .topic-card, .pill { cursor: none; }
+  html.cursor-ready body { cursor: none; }
+  html.cursor-ready a, html.cursor-ready button, html.cursor-ready .q-item, html.cursor-ready .topic-card, html.cursor-ready .pill { cursor: none; }
 }
 .cursor-glow {
   position: fixed;
