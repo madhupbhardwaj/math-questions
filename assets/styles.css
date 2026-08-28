@@ -537,23 +537,33 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 .cursor-glow {
   position: fixed;
   top: 0; left: 0;
-  width: 10px; height: 10px;
+  width: 22px; height: 22px;
   border-radius: 50%;
-  background: var(--text);
+  border: 1.5px solid var(--text);
+  background: transparent;
   box-shadow:
-    0 0 8px 2px color-mix(in srgb, var(--text) 90%, transparent),
-    0 0 20px 6px color-mix(in srgb, var(--text) 35%, transparent),
-    0 0 36px 12px color-mix(in srgb, var(--text) 12%, transparent);
+    0 0 6px 1px color-mix(in srgb, var(--text) 60%, transparent),
+    0 0 16px 4px color-mix(in srgb, var(--text) 20%, transparent);
   pointer-events: none;
   z-index: 9999;
   transform: translate(-50%, -50%);
-  transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease, background 0.2s ease;
+  transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease, border-color 0.2s ease;
   opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cursor-glow::after {
+  content: '';
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: background 0.2s ease;
 }
 .cursor-glow.visible { opacity: 1; }
 .cursor-glow.cursor-hover {
-  width: 22px;
-  height: 22px;
+  width: 34px;
+  height: 34px;
 }
 
 @keyframes skeleton-pulse {
