@@ -46,7 +46,7 @@
       <span class="logo-mark">∑</span>
       problemset
     </div>
-    <span class="signature">Madhup</span>
+    <button class="chai-btn" id="chaiBtn">☕ Chai</button>
   </div>
   <div class="nav-controls">
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme">
@@ -99,12 +99,48 @@
 
 <footer>problemset — built for practice, not perfection.</footer>
 
+
+<div class="support-modal-overlay" id="supportModalOverlay">
+  <div class="support-card" id="supportCard">
+    <button class="support-close-btn" id="supportCloseBtn" aria-label="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="support-header">
+      <h3>Support this project</h3>
+      <span class="support-live">LIVE</span>
+    </div>
+    <p class="support-subtext">Instant. Direct. No middlemen.</p>
+
+    <div class="upi-id-box">
+      <div>
+        <span class="upi-label">UPI ID</span>
+        <span class="upi-value" id="upiIdText">madhupji@fam</span>
+      </div>
+      <button class="copy-btn" id="copyUpiBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+
+    <div class="support-qr-wrap">
+      <img src="../assets/donation/upi-qr.png" alt="UPI QR code">
+    </div>
+    <p class="support-qr-note">Scan with any UPI app — Google Pay, PhonePe, Paytm, or FamPay.</p>
+
+    <a class="support-open-btn" id="openUpiBtn" href="upi://pay?pa=madhupji@fam&pn=Madhup&cu=INR">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+      Open in UPI App
+    </a>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="../assets/app.js"></script>
 <script>
   initTopicPage("number-theory");
   initCursorGlow();
   initMobileMenu();
+  initSupportCard();
   initThemeToggle();
   initTabAwayMessage(["Come back! 👋", "Your questions miss you 🥲", "∑ waiting for you..."]);
 </script>
