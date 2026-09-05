@@ -3,6 +3,7 @@
 // ============================================================
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
 const SHOW_IMAGES = false; // set to true to bring images back
+const SHOW_DONATION = true; // set to false to hide the "Support this project" card
 
 const TOPICS = {
   "Number Theory": {
@@ -398,4 +399,34 @@ function initTabAwayMessage(messages) {
       document.title = originalTitle;
     }
   });
+}
+
+// ============================================================
+// DONATION / SUPPORT CARD
+// Controlled by the SHOW_DONATION flag at the top of this file.
+// Call initSupportCard() from the homepage's inline script.
+// ============================================================
+function initSupportCard() {
+  const card = document.getElementById('supportCard');
+  if (!card) return;
+
+  if (!SHOW_DONATION) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const copyBtn = document.getElementById('copyUpiBtn');
+  const upiText = document.getElementById('upiIdText');
+  if (copyBtn && upiText) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(upiText.textContent.trim());
+        const original = copyBtn.innerHTML;
+        copyBtn.innerHTML = 'Copied!';
+        setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
+      } catch (e) {
+        console.warn('Clipboard copy failed:', e);
+      }
+    });
+  }
 }
