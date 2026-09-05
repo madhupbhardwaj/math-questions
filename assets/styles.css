@@ -487,9 +487,9 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 .q-answer {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.25s ease;
+  transition: max-height 0.3s ease;
 }
-.q-item.open .q-answer { max-height: 300px; }
+.q-item.open .q-answer { max-height: 320px; }
 .q-answer-inner {
   margin-top: 14px;
   margin-left: 40px;
@@ -501,6 +501,14 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   color: var(--text-dim);
   font-family: var(--mono);
   line-height: 1.6;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  transition: opacity 0.4s ease, clip-path 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.q-item.open .q-answer-inner {
+  opacity: 1;
+  clip-path: inset(0 0% 0 0);
+  transition-delay: 0.05s;
 }
 .q-answer-inner .label {
   color: var(--text-faint);
@@ -508,6 +516,13 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   letter-spacing: 0.06em;
   display: block;
   margin-bottom: 6px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.3s ease 0.35s, transform 0.3s ease 0.35s;
+}
+.q-item.open .q-answer-inner .label {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .empty-state {
