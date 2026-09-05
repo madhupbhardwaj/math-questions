@@ -105,6 +105,36 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.5 2.7 10.9c-1.2.5-1.2 1.2-.2 1.5l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.2-2.1 4.5 3.3c.8.5 1.4.2 1.6-.8l3-14.1c.3-1.3-.5-1.9-1.7-1.6zM8.3 13.5l9.3-5.9c.4-.3.8-.1.5.2l-7.8 7.1-.3 3.3-1.7-4.7z"/></svg>
     </a>
   </div>
+
+  <div class="support-card" id="supportCard">
+    <div class="support-header">
+      <h3>Support this project</h3>
+      <span class="support-live">LIVE</span>
+    </div>
+    <p class="support-subtext">Instant. Direct. No middlemen.</p>
+
+    <div class="upi-id-box">
+      <div>
+        <span class="upi-label">UPI ID</span>
+        <span class="upi-value" id="upiIdText">madhupji@fam</span>
+      </div>
+      <button class="copy-btn" id="copyUpiBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+
+    <div class="support-qr-wrap">
+      <img src="assets/donation/upi-qr.png" alt="UPI QR code">
+    </div>
+    <p class="support-qr-note">Scan with any UPI app — Google Pay, PhonePe, Paytm, or FamPay.</p>
+
+    <a class="support-open-btn" id="openUpiBtn" href="upi://pay?pa=madhupji@fam&pn=Madhup&cu=INR">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>
+      Open in UPI App
+    </a>
+  </div>
+
   <div class="credit">Built by Madhup</div>
 </footer>
 
@@ -116,6 +146,7 @@
   initMobileMenu();
   initThemeToggle();
   initTabAwayMessage(["Come back! 👋", "Your questions miss you 🥲", "∑ waiting for you..."]);
+  initSupportCard();
 </script>
 
 </body>
