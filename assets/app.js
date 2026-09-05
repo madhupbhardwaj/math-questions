@@ -3,7 +3,7 @@
 // ============================================================
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
 const SHOW_IMAGES = false; // set to true to bring images back
-const SHOW_DONATION = false; // set to false to hide the "Support this project" card
+const SHOW_DONATION = true; // set to false to hide the "Support this project" card
 
 const TOPICS = {
   "Number Theory": {
