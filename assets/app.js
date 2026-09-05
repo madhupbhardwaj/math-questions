@@ -86,6 +86,7 @@ function buildDataFromRows(rows) {
     if (!topic || !row["Question"]) return;
 
     data[topic.key].questions.push({
+      id: data[topic.key].questions.length, // stable position-based ID for shareable links
       q: autoWrapLatex((row["Question"] || "").trim()),
       a: autoWrapLatex((row["Answer"] || "").trim()) || "No solution provided yet.",
       difficulty: normalizeDifficulty(row["Difficulty"]),
@@ -144,6 +145,7 @@ function renderQuestionItem(item, index, accent) {
   const qEl = document.createElement('div');
   qEl.className = 'q-item';
   qEl.style.setProperty('--glow', accent);
+  qEl.dataset.qid = item.id;
   qEl.innerHTML = `
     <div class="q-row">
       <span class="q-index">${String(index + 1).padStart(2, '0')}</span>
@@ -154,13 +156,34 @@ function renderQuestionItem(item, index, accent) {
             ? `<img class="q-image q-image-linked" src="${item.img}" alt="question diagram" onerror="this.style.display='none'" onclick="event.stopPropagation(); window.open('${item.solutionLink}', '_blank')">`
             : `<img class="q-image" src="${item.img}" alt="question diagram" onerror="this.style.display='none'">`
         ) : ''}
-        <div class="q-meta"><span class="tag tag-${item.difficulty}">${item.difficulty}</span></div>
+        <div class="q-meta">
+          <span class="tag tag-${item.difficulty}">${item.difficulty}</span>
+          <button class="share-btn" data-qid="${item.id}" aria-label="Copy shareable link" title="Copy link to this question">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4"/></svg>
+            Share
+          </button>
+        </div>
         <div class="q-answer"><div class="q-answer-inner"><span class="label">SOLUTION</span>${item.a}</div></div>
       </div>
       <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
       ${item.solutionLink ? `<svg class="link-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>` : ''}
     </div>
   `;
+
+  const shareBtn = qEl.querySelector('.share-btn');
+  shareBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const url = `${location.origin}${location.pathname}?q=${item.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      const original = shareBtn.innerHTML;
+      shareBtn.innerHTML = 'Copied!';
+      setTimeout(() => { shareBtn.innerHTML = original; }, 1500);
+    } catch (err) {
+      console.warn('Clipboard copy failed:', err);
+    }
+  });
+
   qEl.addEventListener('click', () => {
     if (item.solutionLink) {
       window.open(item.solutionLink, '_blank');
@@ -245,7 +268,26 @@ function initTopicPage(topicKey) {
       const countEl = document.getElementById('stat-count');
       if (countEl) countEl.textContent = allQuestions.length;
 
+      // If the URL has ?q=<id>, make sure filters don't hide it, then scroll + highlight
+      const params = new URLSearchParams(location.search);
+      const sharedId = params.get('q');
+      if (sharedId !== null) {
+        currentFilter = 'all';
+        currentSearch = '';
+      }
+
       render();
+
+      if (sharedId !== null) {
+        setTimeout(() => {
+          const target = main.querySelector(`.q-item[data-qid="${sharedId}"]`);
+          if (target) {
+            target.classList.add('open', 'shared-highlight');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => target.classList.remove('shared-highlight'), 2200);
+          }
+        }, 50);
+      }
     }).catch(err => {
       console.error("Failed to load questions:", err);
       main.innerHTML = '<div class="empty-state">Could not load questions right now. Check back shortly.</div>';
@@ -407,13 +449,28 @@ function initTabAwayMessage(messages) {
 // Call initSupportCard() from the homepage's inline script.
 // ============================================================
 function initSupportCard() {
-  const card = document.getElementById('supportCard');
-  if (!card) return;
+  const chaiBtn = document.getElementById('chaiBtn');
+  const overlay = document.getElementById('supportModalOverlay');
+  if (!chaiBtn || !overlay) return;
 
   if (!SHOW_DONATION) {
-    card.style.display = 'none';
+    chaiBtn.style.display = 'none';
     return;
   }
+
+  const closeBtn = document.getElementById('supportCloseBtn');
+
+  const openModal = () => overlay.classList.add('open');
+  const closeModal = () => overlay.classList.remove('open');
+
+  chaiBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal(); // click on the dark backdrop, not the card itself
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
 
   const copyBtn = document.getElementById('copyUpiBtn');
   const upiText = document.getElementById('upiIdText');
