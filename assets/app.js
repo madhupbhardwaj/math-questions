@@ -549,11 +549,10 @@ function initMathEasterEgg() {
 // saved in localStorage so it only shows once per visitor.
 // ============================================================
 const SHOW_CONTRIBUTE = true; // set to false to hide the banner globally
-const CONTRIBUTE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform?usp=sharing&ouid=106435886964634715320"; // replace with your public Google Form link
+const CONTRIBUTE_FORM_URL = "https://forms.gle/YOUR_FORM_LINK_HERE"; // replace with your public Google Form link
 
 function initContributeBanner() {
   if (!SHOW_CONTRIBUTE) return;
-  if (localStorage.getItem('problemset_contribute_dismissed')) return;
 
   const banner = document.createElement('div');
   banner.id = 'contributeBanner';
@@ -562,16 +561,6 @@ function initContributeBanner() {
       💡 Know a great problem?
       <a href="${CONTRIBUTE_FORM_URL}" target="_blank" rel="noopener" class="contribute-link">Suggest a question →</a>
     </span>
-    <button class="contribute-dismiss" id="contributeDismiss" aria-label="Dismiss">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-    </button>
   `;
   document.body.prepend(banner);
-
-  document.getElementById('contributeDismiss').addEventListener('click', () => {
-    banner.style.opacity = '0';
-    banner.style.transform = 'translateY(-100%)';
-    setTimeout(() => banner.remove(), 300);
-    localStorage.setItem('problemset_contribute_dismissed', '1');
-  });
 }
