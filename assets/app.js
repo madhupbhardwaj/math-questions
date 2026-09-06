@@ -533,7 +533,7 @@ function initMathEasterEgg() {
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.altKey && (e.key === 'm' || e.key === 'M' || e.key === 'µ')) {
+    if (e.shiftKey && e.altKey && e.code === 'KeyM') {
       e.preventDefault();
       active = !active;
       styleEl.disabled = !active;
