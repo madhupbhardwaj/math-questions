@@ -549,7 +549,7 @@ function initMathEasterEgg() {
 // saved in localStorage so it only shows once per visitor.
 // ============================================================
 const SHOW_CONTRIBUTE = true; // set to false to hide the banner globally
-const CONTRIBUTE_FORM_URL = "https://forms.gle/YOUR_FORM_LINK_HERE"; // replace with your public Google Form link
+const CONTRIBUTE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform?usp=sharing&ouid=106435886964634715320"; // replace with your public Google Form link
 
 function initContributeBanner() {
   if (!SHOW_CONTRIBUTE) return;
