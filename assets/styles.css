@@ -852,3 +852,36 @@ footer {
   h1 { letter-spacing: -0.02em; }
   .search-box input { font-size: 16px; }
 }
+
+/* ---------- CONTRIBUTE BANNER ---------- */
+#contributeBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.contribute-text { display: flex; align-items: center; gap: 8px; }
+.contribute-link {
+  color: var(--accent-nt);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.contribute-link:hover { opacity: 0.75; }
+.contribute-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  transition: color 0.15s;
+}
+.contribute-dismiss:hover { color: var(--text); }
