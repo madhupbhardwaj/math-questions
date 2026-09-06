@@ -487,3 +487,91 @@ function initSupportCard() {
     });
   }
 }
+
+// ============================================================
+// ALT+MATH EASTER EGG
+// Toggle a fancy serif KaTeX rendering mode.
+// Hold Alt and press M to activate/deactivate.
+// ============================================================
+function initMathEasterEgg() {
+  let active = false;
+
+  // Inject a style tag we'll toggle on/off
+  const styleEl = document.createElement('style');
+  styleEl.id = 'math-serif-override';
+  styleEl.textContent = `
+    .katex { font-family: 'Computer Modern', 'Latin Modern Math', 'STIX Two Math', Georgia, serif !important; }
+    .katex .mathrm, .katex .mathit { font-family: 'Computer Modern', Georgia, serif !important; }
+    .q-text, .q-answer-inner { font-family: Georgia, 'Times New Roman', serif !important; font-size: 15.5px !important; }
+  `;
+  document.head.appendChild(styleEl);
+  styleEl.disabled = true;
+
+  // Toast notification
+  const toast = document.createElement('div');
+  toast.id = 'math-toast';
+  toast.style.cssText = `
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(12px);
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 12px;
+    padding: 10px 18px; border-radius: 8px; opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none; z-index: 9998; white-space: nowrap;
+  `;
+  document.body.appendChild(toast);
+
+  let toastTimer;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    toastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(12px)';
+    }, 2200);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && (e.key === 'm' || e.key === 'M' || e.key === 'µ')) {
+      e.preventDefault();
+      active = !active;
+      styleEl.disabled = !active;
+      showToast(active ? '✦ Serif mode on — math as it should look' : '✦ Serif mode off');
+    }
+  });
+}
+
+// ============================================================
+// CONTRIBUTE CTA BANNER
+// Shows a subtle dismissable "Suggest a question" banner.
+// Controlled by SHOW_CONTRIBUTE flag. Dismissed state is
+// saved in localStorage so it only shows once per visitor.
+// ============================================================
+const SHOW_CONTRIBUTE = true; // set to false to hide the banner globally
+const CONTRIBUTE_FORM_URL = "https://forms.gle/YOUR_FORM_LINK_HERE"; // replace with your public Google Form link
+
+function initContributeBanner() {
+  if (!SHOW_CONTRIBUTE) return;
+  if (localStorage.getItem('problemset_contribute_dismissed')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'contributeBanner';
+  banner.innerHTML = `
+    <span class="contribute-text">
+      💡 Know a great problem?
+      <a href="${CONTRIBUTE_FORM_URL}" target="_blank" rel="noopener" class="contribute-link">Suggest a question →</a>
+    </span>
+    <button class="contribute-dismiss" id="contributeDismiss" aria-label="Dismiss">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  `;
+  document.body.prepend(banner);
+
+  document.getElementById('contributeDismiss').addEventListener('click', () => {
+    banner.style.opacity = '0';
+    banner.style.transform = 'translateY(-100%)';
+    setTimeout(() => banner.remove(), 300);
+    localStorage.setItem('problemset_contribute_dismissed', '1');
+  });
+}
