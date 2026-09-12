@@ -285,6 +285,10 @@ h1 .accent { color: var(--accent-eyebrow, var(--accent-nt)); }
   align-items: center;
 }
 
+.print-btn {
+  margin-left: auto;
+}
+
 .search-box {
   flex: 1;
   min-width: 220px;
@@ -983,12 +987,11 @@ footer {
   .print-btn { display: none !important; }
 }
 
-/* ---------- PRINT BUTTON (visible on page) ---------- */
 .print-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-left: auto;
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
