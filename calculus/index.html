@@ -6,7 +6,7 @@
   (function() {
     try {
       var saved = localStorage.getItem('problemset_theme');
-      if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      if (saved === 'light') { document.documentElement.setAttribute('data-theme', 'light'); } else { document.documentElement.setAttribute('data-theme', 'dark'); }
     } catch (e) {}
   })();
 </script>
