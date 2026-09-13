@@ -564,22 +564,3 @@ function initContributeBanner() {
   `;
   document.body.prepend(banner);
 }
-
-// ============================================================
-// PRINT / SAVE AS PDF
-// Opens browser print dialog with all answers expanded.
-// Call initPrintButton() from each topic page.
-// ============================================================
-function initPrintButton() {
-  const btn = document.getElementById('printBtn');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    // Force all questions open before printing
-    document.querySelectorAll('.q-item').forEach(el => el.classList.add('open'));
-    window.print();
-    // Restore closed state after print dialog closes
-    window.addEventListener('afterprint', () => {
-      document.querySelectorAll('.q-item').forEach(el => el.classList.remove('open'));
-    }, { once: true });
-  });
-}
