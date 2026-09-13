@@ -285,9 +285,6 @@ h1 .accent { color: var(--accent-eyebrow, var(--accent-nt)); }
   align-items: center;
 }
 
-.print-btn {
-  margin-left: auto;
-}
 
 .search-box {
   flex: 1;
@@ -880,16 +877,6 @@ footer {
 }
 .contribute-link:hover { opacity: 0.75; }
 
-/* ---------- PRINT STYLES ---------- */
-@media print {
-  /* Hide all UI chrome */
-  nav, footer, .contribute-banner, #contributeBanner,
-  .share-btn, .chevron, .link-icon, .tag,
-  .filter-bar, .search-wrap, .skeleton,
-  .support-modal-overlay, #math-toast,
-  .theme-toggle, .menu-toggle, .nav-controls,
-  .empty-state > *:not(.empty-title) { display: none !important; }
-
   /* Reset page */
   *, *::before, *::after {
     background: white !important;
@@ -931,11 +918,40 @@ footer {
     padding: 12pt !important;
     page-break-inside: avoid;
     break-inside: avoid;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  .q-row { gap: 10pt !important; }
+  .q-row { gap: 10pt !important; flex-wrap: wrap !important; }
   .q-index { color: #666 !important; font-size: 10pt !important; }
-  .q-text { font-size: 12pt !important; color: black !important; }
+  .q-text {
+    font-size: 12pt !important;
+    color: black !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    width: 100% !important;
+  }
+
+  /* Fix KaTeX overflow in print */
+  .katex-display {
+    overflow: visible !important;
+    white-space: normal !important;
+    margin: 6pt 0 !important;
+  }
+  .katex-display > .katex {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+  }
+  .katex-html {
+    white-space: normal !important;
+    overflow: visible !important;
+  }
+  .q-body {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
 
   /* Force all answers visible */
   .q-answer {
