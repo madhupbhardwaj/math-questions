@@ -69,7 +69,18 @@ function normalizeImageUrl(url) {
 
 function autoWrapLatex(text) {
   if (!text) return text;
+
+  // Questions built from \text{...} blocks are always meant to be full display
+  // math, even when they also contain nested $...$ fragments inside those blocks
+  // (e.g. \text{such that $x=1$}). These must always get wrapped in $$...$$ —
+  // otherwise anything outside the nested $...$ renders as raw literal text.
+  const usesTextBlocks = /\\text\s*\{/.test(text);
+  if (usesTextBlocks) return `$$${text}$$`;
+
+  // Otherwise, a bare $ means the author hand-placed inline math markers in an
+  // otherwise plain sentence (e.g. "Solve for $x$ below.") — leave it alone.
   if (text.includes("$")) return text;
+
   const looksLikeLatex = /\\[a-zA-Z]+|\^|_|\\frac|\\sin|\\cos|\\tan/.test(text);
   return looksLikeLatex ? `$$${text}$$` : text;
 }
