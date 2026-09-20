@@ -377,14 +377,6 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   box-shadow: 0 0 0 1px var(--glow, var(--border-hover)), 0 0 24px -8px var(--glow, transparent);
 }
 .q-item.has-link:hover { background: rgba(108,143,255,0.04); }
-.q-item.has-link .chevron { display: none; }
-.link-icon {
-  color: var(--text-faint);
-  flex-shrink: 0;
-  padding-top: 4px;
-  transition: color 0.15s;
-}
-.q-item.has-link:hover .link-icon { color: var(--accent-nt); }
 
 .q-row {
   display: flex;
@@ -454,7 +446,7 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 .tag-medium { background: rgba(255,196,92,0.1); color: #ffc45c; }
 .tag-hard { background: rgba(255,108,108,0.1); color: #ff6c6c; }
 
-.share-btn {
+.share-btn, .solution-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -469,6 +461,10 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   transition: color 0.15s, border-color 0.15s;
 }
 .share-btn:hover { color: var(--text); border-color: var(--border-hover); }
+/* Video (YouTube) button: neutral pill like Share; the red glyph carries the identity. */
+.solution-btn { color: var(--text-faint); text-decoration: none; }
+.solution-btn:hover { color: var(--text); border-color: rgba(255,0,0,0.55); }
+.solution-btn .yt-icon { flex-shrink: 0; }
 
 @keyframes shared-pulse {
   0%, 100% { box-shadow: 0 0 0 1px var(--glow, var(--border-hover)), 0 0 24px -8px var(--glow, transparent); }

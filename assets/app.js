@@ -169,6 +169,10 @@ function renderQuestionItem(item, index, accent) {
         ) : ''}
         <div class="q-meta">
           <span class="tag tag-${item.difficulty}">${item.difficulty}</span>
+          ${item.solutionLink ? `<a class="solution-btn" href="${item.solutionLink}" target="_blank" rel="noopener" aria-label="Watch the video solution on YouTube">
+            <svg class="yt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4.5" fill="#FF0000"/><path d="M10 9v6l5-3-5-3z" fill="#fff"/></svg>
+            Video
+          </a>` : ''}
           <button class="share-btn" data-qid="${item.id}" aria-label="Copy shareable link" title="Copy link to this question">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4"/></svg>
             Share
@@ -177,7 +181,6 @@ function renderQuestionItem(item, index, accent) {
         <div class="q-answer"><div class="q-answer-inner"><span class="label">SOLUTION</span>${item.a}</div></div>
       </div>
       <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-      ${item.solutionLink ? `<svg class="link-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>` : ''}
     </div>
   `;
 
@@ -195,13 +198,13 @@ function renderQuestionItem(item, index, accent) {
     }
   });
 
-  qEl.addEventListener('click', () => {
-    if (item.solutionLink) {
-      window.open(item.solutionLink, '_blank');
-    } else {
-      qEl.classList.toggle('open');
-    }
-  });
+  // The Solution button opens its link normally (new tab), but must NOT also
+  // toggle the answer reveal — stop the click from bubbling up to the item.
+  const solutionBtn = qEl.querySelector('.solution-btn');
+  if (solutionBtn) solutionBtn.addEventListener('click', (e) => e.stopPropagation());
+
+  // Clicking anywhere else on the question toggles the inline answer reveal.
+  qEl.addEventListener('click', () => qEl.classList.toggle('open'));
   if (item.solutionLink) qEl.classList.add('has-link');
   return qEl;
 }
