@@ -196,8 +196,29 @@ function ensureHtml2Canvas() {
   return _html2canvasPromise;
 }
 
-async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
-  const original = btn.innerHTML;
+// foreignObjectRendering (used below) can silently produce a fully blank
+// canvas without throwing — this checks the actual pixels rather than
+// trusting "no exception" as proof the capture worked.
+function isCanvasBlank(canvas) {
+  try {
+    const ctx = canvas.getContext('2d');
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const r0 = data[0], g0 = data[1], b0 = data[2];
+    // Sample sparsely across the buffer rather than every pixel, for speed.
+    for (let i = 4; i < data.length; i += 4 * 97) {
+      if (Math.abs(data[i] - r0) > 6 || Math.abs(data[i + 1] - g0) > 6 || Math.abs(data[i + 2] - b0) > 6) {
+        return false; // found a pixel that differs from the background — content was drawn
+      }
+    }
+    return true;
+  } catch (e) {
+    // Can't inspect (e.g. tainted canvas) — assume it's fine rather than
+    // discard a possibly-good capture we have no way to verify.
+    return false;
+  }
+}
+
+async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {  const original = btn.innerHTML;
   btn.disabled = true;
   btn.classList.add('busy');
   btn.innerHTML = '<span class="img-btn-spin">◌</span>';
@@ -255,14 +276,26 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
     };
 
     // foreignObjectRendering delegates painting to the browser's own SVG
-    // renderer instead of html2canvas's JS reimplementation of CSS — this is
-    // what fixes KaTeX's SVG-based radicals/delimiters rendering as garbled
-    // shapes. Fall back to the default renderer if it's unsupported/fails.
+    // renderer, which fixes KaTeX's SVG-based radicals/delimiters rendering
+    // as garbled shapes. BUT it has a well-known failure mode: with external
+    // stylesheets (our Google Fonts / KaTeX CDN <link> tags) it often does
+    // NOT throw — it just silently produces a fully blank canvas. So we must
+    // actually inspect the pixels rather than trust "no exception" as success.
     let canvas;
+    let usedForeignObject = false;
     try {
       canvas = await html2canvas(card, { ...baseOpts, foreignObjectRendering: true });
+      usedForeignObject = true;
     } catch (e) {
-      console.warn('foreignObjectRendering capture failed, falling back:', e);
+      console.warn('foreignObjectRendering threw, falling back:', e);
+    }
+
+    if (usedForeignObject && isCanvasBlank(canvas)) {
+      console.warn('foreignObjectRendering produced a blank capture, falling back.');
+      canvas = null;
+    }
+
+    if (!canvas) {
       canvas = await html2canvas(card, baseOpts);
     }
 
