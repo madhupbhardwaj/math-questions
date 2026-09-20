@@ -949,8 +949,8 @@ footer {
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--card-accent, var(--accent-nt));
 }
-.share-card-q { font-size: 22px; line-height: 1.55; }
-.share-card-q .q-text { font-size: 22px; line-height: 1.55; }
+.share-card-q { font-size: 22px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
+.share-card-q .q-text { font-size: 22px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
 .share-card-q .katex-display { margin: 14px 0; }
 .share-card-bottom {
   display: flex; align-items: center; justify-content: space-between;
