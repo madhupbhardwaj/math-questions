@@ -150,9 +150,137 @@ function waitForLibs(callback) {
 }
 
 // ============================================================
+// DIFFICULTY INDICATOR (visual dots + subdued label)
+// ============================================================
+function difficultyIndicator(difficulty) {
+  const d = ["easy", "medium", "hard"].includes(difficulty) ? difficulty : "medium";
+  return `<span class="diff diff-${d}" title="Difficulty: ${d}">
+    <span class="diff-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="diff-label">${d}</span>
+  </span>`;
+}
+
+// ============================================================
+// LIGHTWEIGHT TOAST (shared across features)
+// ============================================================
+let _psToastEl = null, _psToastTimer = null;
+function problemsetToast(msg) {
+  if (!_psToastEl) {
+    _psToastEl = document.createElement('div');
+    _psToastEl.className = 'app-toast';
+    document.body.appendChild(_psToastEl);
+  }
+  _psToastEl.textContent = msg;
+  void _psToastEl.offsetWidth; // restart transition if already showing
+  _psToastEl.classList.add('show');
+  clearTimeout(_psToastTimer);
+  _psToastTimer = setTimeout(() => _psToastEl.classList.remove('show'), 2400);
+}
+
+// ============================================================
+// COPY QUESTION AS IMAGE
+// Renders a branded card (with live KaTeX) to a PNG entirely in
+// the browser — no uploads. Lazy-loads html2canvas on first use.
+// ============================================================
+let _html2canvasPromise = null;
+function ensureHtml2Canvas() {
+  if (window.html2canvas) return Promise.resolve(window.html2canvas);
+  if (_html2canvasPromise) return _html2canvasPromise;
+  _html2canvasPromise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    s.onload = () => resolve(window.html2canvas);
+    s.onerror = () => { _html2canvasPromise = null; reject(new Error('Could not load html2canvas')); };
+    document.head.appendChild(s);
+  });
+  return _html2canvasPromise;
+}
+
+async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add('busy');
+  btn.innerHTML = '<span class="img-btn-spin">◌</span>';
+
+  let card;
+  try {
+    await ensureHtml2Canvas();
+
+    const qTextNode = qEl.querySelector('.q-text');
+    card = document.createElement('div');
+    card.className = 'share-card';
+    card.style.setProperty('--card-accent', accent || 'var(--accent-nt)');
+    card.innerHTML = `
+      <div class="share-card-top">
+        <div class="share-card-brand">
+          <span class="share-card-mark">∑</span>
+          <span class="share-card-word">problemset</span>
+        </div>
+        <span class="share-card-topic">${(topicLabel || '').toUpperCase()}</span>
+      </div>
+      <div class="share-card-q"></div>
+      <div class="share-card-bottom">
+        ${difficultyIndicator(item.difficulty)}
+        <span class="share-card-url">problemset.in</span>
+      </div>
+    `;
+    // Clone the already-rendered question (KaTeX spans included) so the image
+    // matches exactly what's on screen.
+    if (qTextNode) card.querySelector('.share-card-q').appendChild(qTextNode.cloneNode(true));
+    document.body.appendChild(card);
+
+    // Make sure fonts (Inter + KaTeX) are ready before the snapshot.
+    if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
+    await new Promise(r => setTimeout(r, 60));
+
+    const bg = getComputedStyle(document.body).backgroundColor || '#0a0a0b';
+    const canvas = await html2canvas(card, {
+      backgroundColor: bg,
+      scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
+      logging: false,
+      useCORS: true
+    });
+
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    if (!blob) throw new Error('toBlob returned null');
+
+    let copied = false;
+    if (navigator.clipboard && window.ClipboardItem) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        copied = true;
+      } catch (e) { copied = false; }
+    }
+
+    if (copied) {
+      problemsetToast('✓ Image copied to clipboard');
+    } else {
+      // Clipboard image writes aren't supported everywhere — fall back to download.
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'problemset-question.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      problemsetToast('✓ Image saved');
+    }
+  } catch (err) {
+    console.warn('Copy-as-image failed:', err);
+    problemsetToast('Could not create image');
+  } finally {
+    if (card && card.parentNode) card.parentNode.removeChild(card);
+    btn.disabled = false;
+    btn.classList.remove('busy');
+    btn.innerHTML = original;
+  }
+}
+
+// ============================================================
 // SHARED QUESTION RENDERING (used by every topic page)
 // ============================================================
-function renderQuestionItem(item, index, accent) {
+function renderQuestionItem(item, index, accent, topicLabel) {
   const qEl = document.createElement('div');
   qEl.className = 'q-item';
   qEl.style.setProperty('--glow', accent);
@@ -168,11 +296,15 @@ function renderQuestionItem(item, index, accent) {
             : `<img class="q-image" src="${item.img}" alt="question diagram" onerror="this.style.display='none'">`
         ) : ''}
         <div class="q-meta">
-          <span class="tag tag-${item.difficulty}">${item.difficulty}</span>
+          ${difficultyIndicator(item.difficulty)}
           ${item.solutionLink ? `<a class="solution-btn" href="${item.solutionLink}" target="_blank" rel="noopener" aria-label="Watch the video solution on YouTube">
             <svg class="yt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4.5" fill="#FF0000"/><path d="M10 9v6l5-3-5-3z" fill="#fff"/></svg>
             Video
           </a>` : ''}
+          <button class="img-btn" data-qid="${item.id}" aria-label="Copy this question as an image" title="Copy as image">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L5 21"/></svg>
+            Image
+          </button>
           <button class="share-btn" data-qid="${item.id}" aria-label="Copy shareable link" title="Copy link to this question">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4"/></svg>
             Share
@@ -202,6 +334,13 @@ function renderQuestionItem(item, index, accent) {
   // toggle the answer reveal — stop the click from bubbling up to the item.
   const solutionBtn = qEl.querySelector('.solution-btn');
   if (solutionBtn) solutionBtn.addEventListener('click', (e) => e.stopPropagation());
+
+  // Copy-as-image button — also must not toggle the answer.
+  const imgBtn = qEl.querySelector('.img-btn');
+  if (imgBtn) imgBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    copyQuestionAsImage(item, qEl, accent, topicLabel, imgBtn);
+  });
 
   // Clicking anywhere else on the question toggles the inline answer reveal.
   qEl.addEventListener('click', () => qEl.classList.toggle('open'));
@@ -248,6 +387,7 @@ function initTopicPage(topicKey) {
   const main = document.getElementById('main');
   let allQuestions = [];
   let accent = 'var(--accent-nt)';
+  let topicLabel = '';
   let currentFilter = 'all';
   let currentSearch = '';
 
@@ -266,7 +406,7 @@ function initTopicPage(topicKey) {
 
     const list = document.createElement('div');
     list.className = 'question-list';
-    filtered.forEach((item, i) => list.appendChild(renderQuestionItem(item, i, accent)));
+    filtered.forEach((item, i) => list.appendChild(renderQuestionItem(item, i, accent, topicLabel)));
     main.appendChild(list);
     renderMath(main);
   }
@@ -278,6 +418,7 @@ function initTopicPage(topicKey) {
       const section = data[topicKey];
       allQuestions = section ? section.questions : [];
       accent = section ? section.accent : accent;
+      topicLabel = section ? section.label : '';
 
       const countEl = document.getElementById('stat-count');
       if (countEl) countEl.textContent = allQuestions.length;
