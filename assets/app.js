@@ -229,17 +229,42 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
     if (qTextNode) card.querySelector('.share-card-q').appendChild(qTextNode.cloneNode(true));
     document.body.appendChild(card);
 
-    // Make sure fonts (Inter + KaTeX) are ready before the snapshot.
+    // Make sure fonts (Inter + KaTeX) are ready before measuring/snapshotting.
     if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
     await new Promise(r => setTimeout(r, 60));
 
+    // KaTeX renders wide expressions (nested radicals, stacked fractions, big
+    // products) as a single non-breaking block. If that block is wider than
+    // the card, it simply overflows past the edge and gets clipped in the
+    // snapshot. Shrink it down (via zoom, which affects real layout, not just
+    // paint) until it actually fits, rather than letting it clip.
+    const qBox = card.querySelector('.share-card-q');
+    const available = qBox.clientWidth;
+    const widest = Math.max(0, ...Array.from(qBox.querySelectorAll('.katex, .katex-display')).map(el => el.scrollWidth));
+    if (widest > available && available > 0) {
+      const ratio = (available / widest) * 0.97; // small safety margin against rounding
+      qBox.style.zoom = ratio;
+    }
+
     const bg = getComputedStyle(document.body).backgroundColor || '#0a0a0b';
-    const canvas = await html2canvas(card, {
+    const baseOpts = {
       backgroundColor: bg,
       scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
       logging: false,
       useCORS: true
-    });
+    };
+
+    // foreignObjectRendering delegates painting to the browser's own SVG
+    // renderer instead of html2canvas's JS reimplementation of CSS — this is
+    // what fixes KaTeX's SVG-based radicals/delimiters rendering as garbled
+    // shapes. Fall back to the default renderer if it's unsupported/fails.
+    let canvas;
+    try {
+      canvas = await html2canvas(card, { ...baseOpts, foreignObjectRendering: true });
+    } catch (e) {
+      console.warn('foreignObjectRendering capture failed, falling back:', e);
+      canvas = await html2canvas(card, baseOpts);
+    }
 
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     if (!blob) throw new Error('toBlob returned null');
