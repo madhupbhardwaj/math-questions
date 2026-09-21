@@ -1013,6 +1013,7 @@ footer {
 .about-content {
   flex: 1;
   padding: 44px 32px 36px 48px;
+  padding-bottom: 60vh; /* ensures even the last section can scroll to the top */
   min-width: 0;
 }
 
