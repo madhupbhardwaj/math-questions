@@ -68,42 +68,63 @@
   <a href="../" class="back-link">← All topics</a>
   <div class="eyebrow">ABOUT</div>
   <h1>Not just a set <span class="accent">of problems.</span></h1>
-  <p>problemset is a personal, handcrafted collection of the mathematics problems I find most worth sitting with — the kind that reward curiosity over routine.</p>
 </div>
 
-<div class="about-wrap">
+<div class="about-layout">
+  <aside class="about-sidebar">
+    <div class="about-sidebar-label">About</div>
+    <nav class="about-sidebar-nav">
+      <a href="#purpose" class="active">Purpose</a>
+      <a href="#philosophy">Philosophy</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#scope">Scope</a>
+      <a href="#author">Author</a>
+    </nav>
+  </aside>
 
-  <div class="about-section">
-    <h2>Why this exists</h2>
-    <p>Most problem banks optimize for volume: thousands of questions, endless drilling, a race to the next one. This isn't that. <strong>problemset is small on purpose.</strong> Every question here earned its place because it's one of the problems dearest to me — something I found genuinely interesting to think about, not just to solve.</p>
-    <p>The goal is focused practice, not endless scrolling. A few good problems you actually think through beat a hundred you rush past.</p>
-  </div>
+  <main class="about-content">
 
-  <div class="about-callout">
-    The problems worth keeping are the ones that ask you to think outside the general criteria of problem solving.
-  </div>
+    <section class="about-section" id="purpose">
+      <div class="about-section-title">Purpose</div>
+      <div class="about-section-bar" style="background: var(--accent-nt);"></div>
+      <p>Most problem banks optimise for volume — thousands of questions, endless drilling, a race to the next one. This isn't that. <strong>problemset is small on purpose.</strong></p>
+      <p>Every question here earned its place because I found it genuinely interesting to think about, not just to solve. The goal is focused practice, not endless scrolling.</p>
+    </section>
 
-  <div class="about-section">
-    <h2>What makes a good problem</h2>
-    <p>A good problem doesn't just test whether you know a formula — it asks you to see something. To notice a structure, reframe a question, or find the one observation that makes the rest fall into place. Those are the problems collected here: ones that reward a shift in perspective rather than a memorized procedure.</p>
-  </div>
+    <div class="about-callout">The problems worth keeping are the ones that ask you to think outside the general criteria of problem solving.</div>
 
-  <div class="about-section">
-    <h2>How it works</h2>
-    <p>Questions are organized by topic — number theory, trigonometry, calculus, combinatorics, and algebra — each with its own colour. Click any question to reveal its answer; where a worked video solution exists, you'll find a link to it. You can filter by difficulty, search within a topic, share a direct link to any single problem, or copy a question as a clean image to send to a friend.</p>
-    <p>The set is <strong>currently pitched at the undergraduate level</strong>, and it grows as I do — I add problems as my own mathematics deepens.</p>
-  </div>
+    <section class="about-section" id="philosophy">
+      <div class="about-section-title">Philosophy</div>
+      <div class="about-section-bar" style="background: var(--accent-trig);"></div>
+      <p>A good problem doesn't just test whether you know a formula — it asks you to see something. To notice a structure, reframe a question, or find the one observation that makes everything else fall into place.</p>
+      <p>Those are the problems collected here: ones that reward a shift in perspective rather than a memorised procedure.</p>
+    </section>
 
-  <div class="about-section">
-    <h2>Who's behind it</h2>
-    <p>I'm Madhup. I built problemset because these problems mattered to me and I wanted a good home for them. If you know a problem you think belongs here, I'd love to see it — and if something looks off, tell me.</p>
-    <p>Reach me on Discord at <strong>@madhup.bh</strong>, or follow along on <a class="inline-link" href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram</a>.</p>
-    <div class="about-cta">
-      <a class="primary" href="../">Browse the problems →</a>
-      <a href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram channel</a>
-    </div>
-  </div>
+    <section class="about-section" id="how-it-works">
+      <div class="about-section-title">How it works</div>
+      <div class="about-section-bar" style="background: var(--accent-calc);"></div>
+      <p>Questions are organised by topic — number theory, trigonometry, calculus, combinatorics, and algebra — each with its own colour. Click any question to reveal its answer; where a worked video solution exists, you'll find a link to it.</p>
+      <p>You can filter by difficulty, search within a topic, share a direct link to any single problem, or copy a question as a clean image to send to a friend.</p>
+    </section>
 
+    <section class="about-section" id="scope">
+      <div class="about-section-title">Scope</div>
+      <div class="about-section-bar" style="background: var(--accent-comb);"></div>
+      <p>The set is <strong>currently pitched at the undergraduate level</strong>, covering five topics. It grows as I do — I add problems as my own mathematics deepens.</p>
+    </section>
+
+    <section class="about-section" id="author">
+      <div class="about-section-title">Author</div>
+      <div class="about-section-bar" style="background: var(--accent-alg);"></div>
+      <p>I'm Madhup. I built problemset because these problems mattered to me and I wanted a good home for them. If you know a problem you think belongs here, I'd love to see it — and if something looks off, tell me.</p>
+      <p>Reach me on Discord at <strong>@madhup.bh</strong>, or follow along on <a class="inline-link" href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram</a>.</p>
+      <div class="about-cta">
+        <a class="primary" href="../">Browse the problems</a>
+        <a href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram channel</a>
+      </div>
+    </section>
+
+  </main>
 </div>
 
 <footer>problemset — built for practice, not perfection.</footer>
@@ -151,6 +172,25 @@
   initMathEasterEgg();
   initContributeBanner();
   initTabAwayMessage(["Come back! 👋", "Your questions miss you 🥲", "∑ waiting for you..."]);
+
+  // Scroll-spy: highlight the sidebar link matching the currently visible section
+  (function() {
+    var links = document.querySelectorAll('.about-sidebar-nav a');
+    var sections = document.querySelectorAll('.about-section[id], .about-callout');
+    if (!links.length || !sections.length) return;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.id;
+          if (!id) return;
+          links.forEach(function(a) {
+            a.classList.toggle('active', a.getAttribute('href') === '#' + id);
+          });
+        }
+      });
+    }, { rootMargin: '-20% 0px -60% 0px' });
+    sections.forEach(function(s) { if (s.id) observer.observe(s); });
+  })();
 </script>
 
 </body>
