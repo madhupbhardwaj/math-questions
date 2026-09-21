@@ -1020,7 +1020,7 @@ footer {
 /* Each section */
 .about-section {
   margin-bottom: 48px;
-  scroll-margin-top: 24px;
+  scroll-margin-top: 100px;
 }
 .about-section-title {
   font-size: 20px;
