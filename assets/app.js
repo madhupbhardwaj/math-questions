@@ -257,14 +257,25 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {  const 
     // KaTeX renders wide expressions (nested radicals, stacked fractions, big
     // products) as a single non-breaking block. If that block is wider than
     // the card, it simply overflows past the edge and gets clipped in the
-    // snapshot. Shrink it down (via zoom, which affects real layout, not just
-    // paint) until it actually fits, rather than letting it clip.
+    // snapshot. Shrink it down until it actually fits, rather than letting it
+    // clip.
+    //
+    // NOTE: this used to shrink via CSS `zoom`. html2canvas has never reliably
+    // supported `zoom` (open upstream for years) — the browser reflows the
+    // real DOM at the zoomed size, but html2canvas's clone-and-paint step
+    // doesn't consistently apply that same zoom, so KaTeX's glyphs, fraction
+    // bars, radicals and sub/superscripts end up painted at positions that no
+    // longer match their shrunk container — i.e. overlapping/garbled math.
+    // Font-size doesn't have this problem: KaTeX sizes everything internally
+    // in em units, so shrinking font-size causes a genuine layout reflow that
+    // both the foreignObject and manual html2canvas paths render correctly.
     const qBox = card.querySelector('.share-card-q');
     const available = qBox.clientWidth;
     const widest = Math.max(0, ...Array.from(qBox.querySelectorAll('.katex, .katex-display')).map(el => el.scrollWidth));
     if (widest > available && available > 0) {
       const ratio = (available / widest) * 0.97; // small safety margin against rounding
-      qBox.style.zoom = ratio;
+      const baseFontSize = parseFloat(getComputedStyle(qBox).fontSize) || 22;
+      qBox.style.fontSize = (baseFontSize * ratio) + 'px';
     }
 
     const bg = getComputedStyle(document.body).backgroundColor || '#0a0a0b';
