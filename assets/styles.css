@@ -686,6 +686,16 @@ footer {
   background: rgba(108,143,255,0.08);
   transform: translateY(-1px);
 }
+.credit a.support-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,0.25);
+  text-underline-offset: 2px;
+}
+.credit a.support-link:hover {
+  color: var(--accent-nt);
+  text-decoration-color: var(--accent-nt);
+}
 
 /* ---------- DONATION / SUPPORT MODAL ---------- */
 .chai-btn {
