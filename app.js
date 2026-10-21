@@ -450,6 +450,63 @@ function renderSkeleton(container, count) {
 }
 
 // ============================================================
+// DIFFICULTY DONUT CHART
+// Renders a small SVG donut in the hero-stats area showing
+// the easy / medium / hard breakdown for the current topic.
+// ============================================================
+function renderDifficultyChart(questions) {
+  const container = document.querySelector('.hero-stats');
+  if (!container) return;
+
+  const counts = { easy: 0, medium: 0, hard: 0 };
+  questions.forEach(q => counts[q.difficulty]++);
+  const total = questions.length;
+  if (total === 0) return;
+
+  const size = 72;
+  const stroke = 9;
+  const radius = (size - stroke) / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const colors = { easy: '#6cffa3', medium: '#ffc45c', hard: '#ff6c6c' };
+  const order = ['easy', 'medium', 'hard'];
+
+  let offset = 0;
+  const segments = order.filter(d => counts[d] > 0).map(d => {
+    const pct = counts[d] / total;
+    const dash = pct * circumference;
+    const seg = { key: d, count: counts[d], color: colors[d], dash: dash, gap: circumference - dash, offset: offset };
+    offset += dash;
+    return seg;
+  });
+
+  const circles = segments.map(s =>
+    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="${s.color}" stroke-width="${stroke}" stroke-dasharray="${s.dash} ${s.gap}" stroke-dashoffset="-${s.offset}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" />`
+  ).join('');
+
+  const legend = segments.map(s =>
+    `<div class="chart-legend-row">
+      <span class="chart-legend-dot" style="background:${s.color}"></span>
+      <span class="chart-legend-count">${s.count}</span>
+      <span class="chart-legend-label">${s.key}</span>
+    </div>`
+  ).join('');
+
+  const el = document.createElement('div');
+  el.className = 'difficulty-chart';
+  el.innerHTML = `
+    <svg class="donut-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="var(--border)" stroke-width="${stroke}" />
+      ${circles}
+    </svg>
+    <div class="chart-legend">${legend}</div>
+  `;
+  container.appendChild(el);
+}
+
+// ============================================================
 // SINGLE-TOPIC PAGE LOGIC
 // Call initTopicPage("trigonometry") from that page's inline script.
 // ============================================================
@@ -492,6 +549,8 @@ function initTopicPage(topicKey) {
 
       const countEl = document.getElementById('stat-count');
       if (countEl) countEl.textContent = allQuestions.length;
+
+      renderDifficultyChart(allQuestions);
 
       // If the URL has ?q=<id>, make sure filters don't hide it, then scroll + highlight
       const params = new URLSearchParams(location.search);
