@@ -4,6 +4,7 @@
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
 const SHOW_IMAGES = false; // set to true to bring images back
 const SHOW_DONATION = true; // set to false to hide the "Support this project" card
+const SHOW_PROGRESS = true; // set to false to hide "Mark solved" buttons and the solved counter
 
 const TOPICS = {
   "Number Theory": {
@@ -135,11 +136,13 @@ async function loadData() {
     return data;
   } catch (err) {
     // Live fetch failed even after retries — fall back to last known-good data if we have it
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      console.warn("Live fetch failed, showing cached data:", err);
-      return JSON.parse(cached);
-    }
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        console.warn("Live fetch failed, showing cached data:", err);
+        return JSON.parse(cached);
+      }
+    } catch (e) { /* storage blocked or cache corrupt — fall through to the original error */ }
     throw err;
   }
 }
@@ -350,21 +353,51 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
 // ============================================================
 // SHARED QUESTION RENDERING (used by every topic page)
 // ============================================================
-function renderQuestionItem(item, index, accent, topicLabel) {
+// ============================================================
+// SOLVED-QUESTION TRACKING (per browser, stored in localStorage)
+// Controlled by SHOW_PROGRESS. IDs are position-based, so append new
+// questions to the END of a topic in the sheet to keep progress intact.
+// ============================================================
+const PROGRESS_KEY = "problemset_solved_v1";
+
+function readAllProgress() {
+  try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function getSolvedSet(topicKey) {
+  const list = readAllProgress()[topicKey];
+  return new Set(Array.isArray(list) ? list : []);
+}
+function setSolved(topicKey, id, solved) {
+  const all = readAllProgress();
+  const set = new Set(Array.isArray(all[topicKey]) ? all[topicKey] : []);
+  if (solved) set.add(id); else set.delete(id);
+  all[topicKey] = Array.from(set);
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(all)); } catch (e) {}
+}
+
+// Open/close a question and keep the chevron button's aria-expanded in sync.
+function setQuestionOpen(qEl, open) {
+  qEl.classList.toggle('open', open);
+  const toggle = qEl.querySelector('.chevron-btn');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Hide solution' : 'Show solution');
+  }
+}
+
+function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgressChange) {
   const qEl = document.createElement('div');
   qEl.className = 'q-item';
   qEl.style.setProperty('--glow', accent);
   qEl.dataset.qid = item.id;
+  const isSolved = SHOW_PROGRESS && topicKey && getSolvedSet(topicKey).has(item.id);
   qEl.innerHTML = `
     <div class="q-row">
       <span class="q-index">${String(index + 1).padStart(2, '0')}</span>
       <div class="q-body">
         <div class="q-text">${item.q}</div>
-        ${(SHOW_IMAGES && item.img) ? (
-          item.solutionLink
-            ? `<img class="q-image q-image-linked" src="${item.img}" alt="question diagram" onerror="this.style.display='none'" onclick="event.stopPropagation(); window.open('${item.solutionLink}', '_blank')">`
-            : `<img class="q-image" src="${item.img}" alt="question diagram" onerror="this.style.display='none'">`
-        ) : ''}
+        ${(SHOW_IMAGES && item.img) ? `<img class="q-image${item.solutionLink ? ' q-image-linked' : ''}" src="${item.img}" alt="question diagram">` : ''}
         <div class="q-meta">
           ${difficultyIndicator(item.difficulty)}
           ${item.solutionLink ? `<a class="solution-btn" href="${item.solutionLink}" target="_blank" rel="noopener" aria-label="Watch the video solution on YouTube">
@@ -379,12 +412,49 @@ function renderQuestionItem(item, index, accent, topicLabel) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5 15.4 6.5M8.6 13.5l6.8 4"/></svg>
             Share
           </button>
+          ${SHOW_PROGRESS ? `<button class="solved-btn" aria-pressed="false" title="Mark this question as solved">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="solved-label">Mark solved</span>
+          </button>` : ''}
         </div>
         <div class="q-answer"><div class="q-answer-inner"><span class="label">SOLUTION</span>${item.a}</div></div>
       </div>
-      <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      <button class="chevron-btn" type="button" aria-expanded="false" aria-label="Show solution">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
     </div>
   `;
+
+  // Diagram image: attach handlers in JS instead of inline attributes (avoids
+  // breaking on quotes in the solution URL). Linked images open the video.
+  const diagram = qEl.querySelector('.q-image');
+  if (diagram) {
+    diagram.addEventListener('error', () => { diagram.style.display = 'none'; });
+    if (item.solutionLink) {
+      diagram.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.open(item.solutionLink, '_blank', 'noopener');
+      });
+    }
+  }
+
+  // Solved toggle — must not toggle the answer either.
+  const solvedBtn = qEl.querySelector('.solved-btn');
+  if (solvedBtn) {
+    const paint = (solved) => {
+      qEl.classList.toggle('solved', solved);
+      solvedBtn.setAttribute('aria-pressed', solved ? 'true' : 'false');
+      solvedBtn.querySelector('.solved-label').textContent = solved ? 'Solved' : 'Mark solved';
+    };
+    paint(isSolved);
+    solvedBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = !qEl.classList.contains('solved');
+      paint(next);
+      setSolved(topicKey, item.id, next);
+      if (onProgressChange) onProgressChange();
+    });
+  }
 
   const shareBtn = qEl.querySelector('.share-btn');
   shareBtn.addEventListener('click', async (e) => {
@@ -413,7 +483,9 @@ function renderQuestionItem(item, index, accent, topicLabel) {
   });
 
   // Clicking anywhere else on the question toggles the inline answer reveal.
-  qEl.addEventListener('click', () => qEl.classList.toggle('open'));
+  // The chevron is a real <button>, so keyboard users can Tab to it and press
+  // Enter/Space; its click bubbles up here and reveals the answer too.
+  qEl.addEventListener('click', () => setQuestionOpen(qEl, !qEl.classList.contains('open')));
   if (item.solutionLink) qEl.classList.add('has-link');
   return qEl;
 }
@@ -526,16 +598,63 @@ function initTopicPage(topicKey) {
       return matchesFilter && matchesSearch;
     });
 
+    if (allQuestions.length === 0) {
+      main.innerHTML = '<div class="empty-state">No questions here yet — check back soon.</div>';
+      return;
+    }
+
     if (filtered.length === 0) {
-      main.innerHTML = '<div class="empty-state">No questions match your search.</div>';
+      main.innerHTML = '<div class="empty-state">No questions match your search. <button type="button" class="empty-reset">Clear filters</button></div>';
+      main.querySelector('.empty-reset').addEventListener('click', () => {
+        currentFilter = 'all';
+        currentSearch = '';
+        const input = document.getElementById('searchInput');
+        if (input) input.value = '';
+        document.querySelectorAll('.pill').forEach(p => p.classList.toggle('active', p.dataset.filter === 'all'));
+        render();
+      });
       return;
     }
 
     const list = document.createElement('div');
     list.className = 'question-list';
-    filtered.forEach((item, i) => list.appendChild(renderQuestionItem(item, i, accent, topicLabel)));
+    filtered.forEach((item, i) => list.appendChild(
+      renderQuestionItem(item, i, accent, topicLabel, topicKey, updateSolvedCount)
+    ));
     main.appendChild(list);
     renderMath(main);
+  }
+
+  // Shows "N solved" next to the question count (SHOW_PROGRESS only).
+  function updateSolvedCount() {
+    const el = document.getElementById('stat-solved');
+    if (!el) return;
+    const solved = getSolvedSet(topicKey);
+    el.textContent = allQuestions.filter(q => solved.has(q.id)).length;
+  }
+
+  function renderSolvedStat() {
+    const stats = document.querySelector('.hero-stats');
+    if (!SHOW_PROGRESS || !stats || document.getElementById('stat-solved')) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = '<div class="stat-num" id="stat-solved">0</div><div class="stat-label">solved</div>';
+    stats.appendChild(wrap);
+    updateSolvedCount();
+  }
+
+  // Adds a live count to each filter pill, e.g. "Easy 4".
+  function renderPillCounts() {
+    const counts = { all: allQuestions.length, easy: 0, medium: 0, hard: 0 };
+    allQuestions.forEach(q => { counts[q.difficulty]++; });
+    document.querySelectorAll('.pill').forEach(pill => {
+      let badge = pill.querySelector('.pill-count');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'pill-count';
+        pill.appendChild(badge);
+      }
+      badge.textContent = counts[pill.dataset.filter] ?? '';
+    });
   }
 
   renderSkeleton(main, 5);
@@ -550,7 +669,9 @@ function initTopicPage(topicKey) {
       const countEl = document.getElementById('stat-count');
       if (countEl) countEl.textContent = allQuestions.length;
 
+      renderSolvedStat();
       renderDifficultyChart(allQuestions);
+      renderPillCounts();
 
       // If the URL has ?q=<id>, make sure filters don't hide it, then scroll + highlight
       const params = new URLSearchParams(location.search);
@@ -566,7 +687,8 @@ function initTopicPage(topicKey) {
         setTimeout(() => {
           const target = main.querySelector(`.q-item[data-qid="${sharedId}"]`);
           if (target) {
-            target.classList.add('open', 'shared-highlight');
+            setQuestionOpen(target, true);
+            target.classList.add('shared-highlight');
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             setTimeout(() => target.classList.remove('shared-highlight'), 2200);
           }
@@ -828,9 +950,8 @@ function initMathEasterEgg() {
 
 // ============================================================
 // CONTRIBUTE CTA BANNER
-// Shows a subtle dismissable "Suggest a question" banner.
-// Controlled by SHOW_CONTRIBUTE flag. Dismissed state is
-// saved in localStorage so it only shows once per visitor.
+// Shows a permanent, subtle "Suggest a question" banner at the
+// top of every page. Controlled by the SHOW_CONTRIBUTE flag.
 // ============================================================
 const SHOW_CONTRIBUTE = true; // set to false to hide the banner globally
 const CONTRIBUTE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform";
