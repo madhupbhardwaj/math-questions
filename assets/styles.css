@@ -92,7 +92,6 @@ nav {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-right: auto;
   overflow: visible;
 }
 .signature {
@@ -117,10 +116,9 @@ nav {
 .nav-links a:hover, .nav-links a.active { color: var(--text); }
 
 .nav-quote {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) rotate(-3deg);
+  flex: 1;
+  text-align: center;
+  transform: rotate(-3deg);
   font-family: 'Dancing Script', cursive;
   font-size: 19px;
   font-weight: 600;
@@ -128,12 +126,16 @@ nav {
   opacity: 0.28;
   white-space: nowrap;
   pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .nav-controls {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 
 .menu-toggle {
@@ -470,6 +472,48 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   color: var(--text-faint);
 }
 
+/* ---------- DIFFICULTY DONUT CHART ---------- */
+.difficulty-chart {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: 20px;
+  padding-left: 24px;
+  border-left: 1px solid var(--border);
+}
+.donut-svg { flex-shrink: 0; }
+.chart-legend { display: flex; flex-direction: column; gap: 5px; }
+.chart-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.chart-legend-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.chart-legend-count {
+  font-weight: 600;
+  color: var(--text);
+  min-width: 14px;
+}
+.chart-legend-label {
+  color: var(--text-faint);
+  text-transform: capitalize;
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  .difficulty-chart {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: 20px;
+  }
+}
+
 .share-btn, .solution-btn, .img-btn {
   display: inline-flex;
   align-items: center;
@@ -514,7 +558,7 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
   overflow: hidden;
   transition: max-height 0.3s ease;
 }
-.q-item.open .q-answer { max-height: 320px; }
+.q-item.open .q-answer { max-height: 2000px; }
 .q-answer-inner {
   margin-top: 14px;
   margin-left: 40px;
@@ -991,7 +1035,7 @@ footer {
   border-right: 1px solid var(--border);
   padding: 44px 28px 44px 8px;
   position: sticky;
-  top: 0;
+  top: 65px;
   height: fit-content;
 }
 .about-sidebar-label {
