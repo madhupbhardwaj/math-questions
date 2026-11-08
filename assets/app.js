@@ -221,6 +221,201 @@ function isCanvasBlank(canvas) {
   }
 }
 
+// ============================================================
+// SHARE-IMAGE QUESTION LAYOUT
+// Questions are authored as one big display-math block ($$ \text{...} x^2 \\ ... $$).
+// KaTeX never wraps display math, so a long line simply runs off the edge of
+// the fixed-width share card. For the image we rebuild each line instead:
+// \text{...} becomes real wrapping text, the math between it becomes inline
+// (\displaystyle) KaTeX that can break after = + - etc., and the author's own
+// \\ line breaks are kept as separate lines. Only a single formula that is
+// genuinely too wide to break gets shrunk — on its own.
+// ============================================================
+function _escHtml(t) {
+  return String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Read a LaTeX command starting at s[i] === '\\'. Returns the command text.
+function _readCmd(s, i) {
+  let j = i + 1;
+  if (/[a-zA-Z]/.test(s[j] || '')) { while (j < s.length && /[a-zA-Z]/.test(s[j])) j++; }
+  else j++;
+  return s.slice(i, j);
+}
+
+// Walk a LaTeX string, tracking brace / \begin..\end / \left..\right depth, and
+// call onTop(cmd, i) for every command that sits at the top level. If onTop
+// returns a number, scanning resumes from that index.
+function _scanLatex(s, onTop, onChar) {
+  let i = 0, depth = 0, env = 0, lr = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c === '\\') {
+      const cmd = _readCmd(s, i);
+      if (depth === 0 && env === 0 && lr === 0) {
+        const jump = onTop(cmd, i);
+        if (typeof jump === 'number') { i = jump; continue; }
+      }
+      if (cmd === '\\begin') env++;
+      else if (cmd === '\\end') env = Math.max(0, env - 1);
+      else if (cmd === '\\left') lr++;
+      else if (cmd === '\\right') lr = Math.max(0, lr - 1);
+      onChar(cmd);
+      i += cmd.length;
+      continue;
+    }
+    if (c === '{') depth++;
+    else if (c === '}') depth = Math.max(0, depth - 1);
+    onChar(c);
+    i++;
+  }
+}
+
+// Index just past the brace group that opens at s[k] === '{'.
+function _matchBrace(s, k) {
+  let d = 0;
+  for (let i = k; i < s.length; i++) {
+    if (s[i] === '\\') { i++; continue; }
+    if (s[i] === '{') d++;
+    else if (s[i] === '}' && --d === 0) return i + 1;
+  }
+  return s.length;
+}
+
+function _katexInline(tex) {
+  if (!tex.trim()) return '';
+  // Display-only environments can't sit inline; their "-ed" forms can.
+  const t = tex
+    .replace(/\\(begin|end)\{(gather|align)\*?\}/g, '\\$1{$2ed}')
+    .replace(/\\(begin|end)\{equation\*?\}/g, '')
+    // KaTeX draws ≠ / ∉ as "=" / "∈" plus a zero-width overlaid slash, which
+    // html2canvas drops (so "p ≠ 0" would read "p = 0"). Use the real glyphs.
+    .replace(/\\neq?(?![a-zA-Z])|\\not\s*=/g, '\\mathrel{\\char"2260}')
+    .replace(/\\notin(?![a-zA-Z])|\\not\s*\\in(?![a-zA-Z])/g, '\\mathrel{\\char"2209}');
+  try {
+    return '<span class="sc-math">' + katex.renderToString('\\displaystyle ' + t, { throwOnError: false, displayMode: false }) + '</span>';
+  } catch (e) {
+    return '<span class="sc-math">' + _escHtml(tex) + '</span>';
+  }
+}
+
+// Plain text that may contain hand-placed $...$ inline math.
+function _textWithDollars(t, cls) {
+  return t.split(/(\$[^$]+\$)/g).map(part => {
+    if (/^\$[^$]+\$$/.test(part)) return _katexInline(part.slice(1, -1));
+    return part ? `<span class="${cls}">${_escHtml(part)}</span>` : '';
+  }).join('');
+}
+
+function _renderShareLine(line) {
+  let out = '', math = '';
+  const flush = () => { out += _katexInline(math); math = ''; };
+  _scanLatex(line, (cmd, i) => {
+    if (cmd === '\\text' || cmd === '\\textrm' || cmd === '\\mbox' || cmd === '\\textbf' || cmd === '\\textit') {
+      let k = i + cmd.length;
+      while (line[k] === ' ') k++;
+      if (line[k] !== '{') return;
+      const end = _matchBrace(line, k);
+      flush();
+      const cls = 'sc-text' + (cmd === '\\textbf' ? ' sc-bold' : cmd === '\\textit' ? ' sc-italic' : '');
+      out += _textWithDollars(line.slice(k + 1, end - 1).replace(/\\([%&#_$])/g, '$1'), cls);
+      return end;
+    }
+    if (cmd === '\\quad' || cmd === '\\qquad') {
+      flush();
+      out += '<span class="sc-gap"></span> ';
+      return i + cmd.length;
+    }
+  }, ch => { math += ch; });
+  flush();
+  return out;
+}
+
+// Turn a question's source into wrapping HTML for the share card.
+function buildShareQuestionHTML(src) {
+  const s = (src || '').trim();
+  const isDisplay = s.length >= 4 && s.startsWith('$$') && s.endsWith('$$');
+  if (!isDisplay) {
+    // A normal sentence with optional $...$ — it already wraps on its own.
+    return `<div class="sc-line">${_textWithDollars(s, 'sc-plain')}</div>`;
+  }
+  const body = s.slice(2, -2);
+  const lines = [];
+  let start = 0;
+  _scanLatex(body, (cmd, i) => {
+    if (cmd === '\\\\') { lines.push(body.slice(start, i)); start = i + 2; return start; }
+  }, () => {});
+  lines.push(body.slice(start));
+  return lines
+    .filter(l => l.trim())
+    .map(l => `<div class="sc-line">${_renderShareLine(l)}</div>`)
+    .join('');
+}
+
+// After the card is in the DOM: shrink any single formula whose smallest
+// unbreakable piece is still wider than the card, so nothing is ever clipped.
+function fitShareMath(qBox) {
+  const available = qBox.clientWidth;
+  if (!available) return;
+  qBox.querySelectorAll('.sc-math').forEach(m => {
+    let widest = 0;
+    m.querySelectorAll('.katex-html > .base').forEach(b => {
+      widest = Math.max(widest, b.getBoundingClientRect().width);
+    });
+    if (!widest) widest = m.getBoundingClientRect().width;
+    if (widest > available) m.style.fontSize = ((available / widest) * 0.96) + 'em';
+  });
+}
+
+// Tall \left( ... \right) delimiters are drawn as an SVG nested inside several
+// KaTeX "vlist" boxes; html2canvas clips it to the wrong box, so only part of
+// the bracket appears in the image. Right before capture, lift each piece out
+// to an absolutely-positioned copy at the exact same spot on the card (layout
+// is untouched — the original is just hidden).
+function liftTallDelimiters(card) {
+  const cardRect = card.getBoundingClientRect();
+  const cs = getComputedStyle(card);
+  const offX = cardRect.left + (parseFloat(cs.borderLeftWidth) || 0);
+  const offY = cardRect.top + (parseFloat(cs.borderTopWidth) || 0);
+  card.querySelectorAll('.share-card-q .delimsizing.mult').forEach(delim => {
+    const color = getComputedStyle(delim).color;
+    delim.querySelectorAll('svg, span').forEach(el => {
+      const isSvg = el.tagName.toLowerCase() === 'svg';
+      if (!isSvg && (el.children.length || !el.textContent.replace(/[\s\u200b]/g, '') || el.closest('svg'))) return;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      let copy;
+      if (isSvg) {
+        // html2canvas skips lifted inline <svg>, but paints <img> reliably.
+        const svg = el.cloneNode(true);
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('width', r.width);
+        svg.setAttribute('height', r.height);
+        svg.setAttribute('fill', color);
+        svg.removeAttribute('style');
+        copy = document.createElement('img');
+        copy.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+      } else {
+        copy = el.cloneNode(true);
+      }
+      Object.assign(copy.style, {
+        position: 'absolute', margin: '0', padding: '0',
+        left: (r.left - offX) + 'px', top: (r.top - offY) + 'px',
+        width: r.width + 'px', height: r.height + 'px'
+      });
+      if (!isSvg) {
+        const ecs = getComputedStyle(el);
+        Object.assign(copy.style, {
+          fontFamily: ecs.fontFamily, fontSize: ecs.fontSize, lineHeight: ecs.lineHeight,
+          color: color, whiteSpace: 'nowrap'
+        });
+      }
+      card.appendChild(copy);
+      el.style.visibility = 'hidden';
+    });
+  });
+}
+
 async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -249,45 +444,36 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
         <span class="share-card-url">problemset.in</span>
       </div>
     `;
-    // Clone the already-rendered question (KaTeX spans included) so the image
-    // matches exactly what's on screen.
-    if (qTextNode) card.querySelector('.share-card-q').appendChild(qTextNode.cloneNode(true));
+    // Rebuild the question so long lines wrap and the card grows downward
+    // instead of clipping on the right (see buildShareQuestionHTML).
+    const qSlot = card.querySelector('.share-card-q');
+    if (window.katex && item.q) {
+      qSlot.innerHTML = buildShareQuestionHTML(item.q);
+    } else if (qTextNode) {
+      qSlot.appendChild(qTextNode.cloneNode(true));
+    }
     document.body.appendChild(card);
 
     // Make sure fonts (Inter + KaTeX) are ready before measuring/snapshotting.
     if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
     await new Promise(r => setTimeout(r, 60));
 
-    // KaTeX renders wide expressions (nested radicals, stacked fractions, big
-    // products) as a single non-breaking block. If that block is wider than
-    // the card, it simply overflows past the edge and gets clipped in the
-    // snapshot. Shrink it down until it actually fits, rather than letting it
-    // clip.
-    //
-    // NOTE: this used to shrink via CSS `zoom`. html2canvas has never reliably
-    // supported `zoom` (open upstream for years) — the browser reflows the
-    // real DOM at the zoomed size, but html2canvas's clone-and-paint step
-    // doesn't consistently apply that same zoom, so KaTeX's glyphs, fraction
-    // bars, radicals and sub/superscripts end up painted at positions that no
-    // longer match their shrunk container — i.e. overlapping/garbled math.
-    // Font-size doesn't have this problem: KaTeX sizes everything internally
-    // in em units, so shrinking font-size causes a genuine layout reflow that
-    // both the foreignObject and manual html2canvas paths render correctly.
+    // Shrink only formulas that can't wrap and are still wider than the card.
+    // (Font-size, not CSS zoom: html2canvas paints zoomed KaTeX incorrectly.)
     const qBox = card.querySelector('.share-card-q');
-    const available = qBox.clientWidth;
-    const widest = Math.max(0, ...Array.from(qBox.querySelectorAll('.katex, .katex-display')).map(el => el.scrollWidth));
-    if (widest > available && available > 0) {
-      const ratio = (available / widest) * 0.97; // small safety margin against rounding
-      const baseFontSize = parseFloat(getComputedStyle(qBox).fontSize) || 22;
-      qBox.style.fontSize = (baseFontSize * ratio) + 'px';
-    }
+    fitShareMath(qBox);
+    await new Promise(r => requestAnimationFrame(() => r()));
+    liftTallDelimiters(card);
 
     const bg = getComputedStyle(document.body).backgroundColor || '#0a0a0b';
     const baseOpts = {
       backgroundColor: bg,
       scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
       logging: false,
-      useCORS: true
+      useCORS: true,
+      // Tall (long) questions: make sure the capture viewport fits the whole card
+      windowWidth: Math.max(window.innerWidth, card.offsetWidth + 40),
+      windowHeight: Math.max(window.innerHeight, card.offsetHeight + 40)
     };
 
     // foreignObjectRendering delegates painting to the browser's own SVG

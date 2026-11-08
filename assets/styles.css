@@ -1009,7 +1009,7 @@ footer {
   position: fixed;
   left: -9999px;
   top: 0;
-  width: 600px;
+  width: 720px;
   box-sizing: border-box;
   padding: 38px 44px 30px;
   background: var(--bg);
@@ -1036,9 +1036,18 @@ footer {
   text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--card-accent, var(--accent-nt));
 }
-.share-card-q { font-size: 22px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; min-width: 0; }
-.share-card-q .q-text { font-size: 22px; line-height: 1.55; overflow-wrap: break-word; word-break: break-word; }
-.share-card-q .katex-display { margin: 14px 0; }
+.share-card-q { font-size: 22px; line-height: 1.6; overflow-wrap: break-word; word-break: break-word; min-width: 0; overflow: visible; text-align: center; }
+.share-card-q .q-text { font-size: 22px; line-height: 1.55; overflow: visible; white-space: normal; }
+.share-card-q .katex-display { margin: 14px 0; overflow: visible; }
+/* Rebuilt, wrapping question lines (see buildShareQuestionHTML in app.js) */
+.share-card-q .sc-line { text-align: center; }
+.share-card-q .sc-line + .sc-line { margin-top: 8px; }
+.share-card-q .sc-text { font-family: KaTeX_Main, 'Times New Roman', serif; font-size: 1.21em; }
+.share-card-q .sc-bold { font-weight: 700; }
+.share-card-q .sc-italic { font-style: italic; }
+.share-card-q .sc-gap { display: inline-block; width: 0.8em; }
+.share-card-q .sc-math + .sc-text { margin-left: 0.3em; }
+.share-card-q .sc-math .katex { white-space: normal; }
 .share-card-bottom {
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid var(--border); padding-top: 20px;
