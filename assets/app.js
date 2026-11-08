@@ -586,31 +586,64 @@ function initLandingPage() {
 // Skips itself automatically on touch devices.
 // ============================================================
 function initCursorGlow() {
+  // Precision cursor: a small dot that tracks the pointer exactly, plus a thin
+  // ring that follows with a light easing. The ring expands and takes the page's
+  // accent colour over clickable things; text fields keep the native I-beam.
   if (!window.matchMedia('(pointer: fine)').matches) return;
 
+  const root = document.documentElement;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const ring = document.createElement('div');
+  ring.className = 'cursor-ring';
   const dot = document.createElement('div');
-  dot.className = 'cursor-glow';
-  document.body.appendChild(dot);
-  document.documentElement.classList.add('cursor-ready');
+  dot.className = 'cursor-dot';
+  document.body.append(ring, dot);
+  root.classList.add('cursor-ready');
 
-  let x = 0, y = 0;
+  let mx = -100, my = -100, rx = -100, ry = -100;
+  let raf = null, shown = false;
+  const place = (el, x, y) => { el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`; };
+
+  function follow() {
+    rx += (mx - rx) * 0.22;
+    ry += (my - ry) * 0.22;
+    place(ring, rx, ry);
+    if (Math.abs(mx - rx) > 0.1 || Math.abs(my - ry) > 0.1) raf = requestAnimationFrame(follow);
+    else raf = null;
+  }
+
   document.addEventListener('mousemove', (e) => {
-    x = e.clientX;
-    y = e.clientY;
-    dot.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
-    dot.classList.add('visible');
+    mx = e.clientX;
+    my = e.clientY;
+    place(dot, mx, my);
+    if (!shown) {
+      // First move (or re-entry): snap the ring into place instead of sliding in from a corner
+      rx = mx; ry = my;
+      place(ring, rx, ry);
+      shown = true;
+      root.classList.add('cursor-visible');
+    }
+    if (reduceMotion) place(ring, mx, my);
+    else if (!raf) raf = requestAnimationFrame(follow);
   });
 
-  document.addEventListener('mouseleave', () => dot.classList.remove('visible'));
-  document.addEventListener('mouseenter', () => dot.classList.add('visible'));
-
-  const hoverTargets = 'a, button, .q-item, .topic-card, .pill, input';
-  document.addEventListener('mouseover', (e) => {
-    if (e.target.closest(hoverTargets)) dot.classList.add('cursor-hover');
-  });
   document.addEventListener('mouseout', (e) => {
-    if (e.target.closest(hoverTargets)) dot.classList.remove('cursor-hover');
+    if (!e.relatedTarget) { shown = false; root.classList.remove('cursor-visible'); }
   });
+
+  const interactive = 'a, button, .q-item, .topic-card, .pill, label, [role="button"]';
+  const textual = 'input, textarea, select, [contenteditable="true"]';
+  document.addEventListener('mouseover', (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    const isText = !!t.closest(textual);
+    root.classList.toggle('cursor-text', isText);
+    root.classList.toggle('cursor-hover', !isText && !!t.closest(interactive));
+  });
+
+  document.addEventListener('mousedown', () => root.classList.add('cursor-down'));
+  document.addEventListener('mouseup', () => root.classList.remove('cursor-down'));
 }
 
 // ============================================================
@@ -634,15 +667,31 @@ function initThemeToggle() {
   const btn = document.getElementById('themeToggle');
   if (!btn) return;
 
+  // Keep the mobile browser's address-bar colour in step with the theme
+  function syncThemeColor() {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    meta.content = isLight ? '#ffffff' : '#0a0a0b';
+  }
+  syncThemeColor();
+
   btn.addEventListener('click', () => {
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    if (isLight) {
-      document.documentElement.removeAttribute('data-theme');
-      localStorage.setItem('problemset_theme', 'dark');
-    } else {
-      document.documentElement.setAttribute('data-theme', 'light');
-      localStorage.setItem('problemset_theme', 'light');
-    }
+    try {
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('problemset_theme', 'dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('problemset_theme', 'light');
+      }
+    } catch (e) {}
+    syncThemeColor();
   });
 }
 

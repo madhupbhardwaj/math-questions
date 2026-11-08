@@ -638,41 +638,52 @@ main { max-width: 1040px; margin: 0 auto; padding: 8px 32px 100px; }
 .skeleton-index { animation: skeleton-pulse 1.4s ease-in-out infinite; }
 
 /* ---------- CUSTOM CURSOR ---------- */
+/* Precision dot + trailing ring. Only on mouse/trackpad devices. */
 @media (pointer: fine) {
-  html.cursor-ready body { cursor: none; }
-  html.cursor-ready a, html.cursor-ready button, html.cursor-ready .q-item, html.cursor-ready .topic-card, html.cursor-ready .pill { cursor: none; }
+  html.cursor-ready, html.cursor-ready * { cursor: none !important; }
+  html.cursor-ready input, html.cursor-ready textarea, html.cursor-ready select,
+  html.cursor-ready [contenteditable="true"] { cursor: text !important; }
 }
-.cursor-glow {
+.cursor-dot, .cursor-ring {
   position: fixed;
   top: 0; left: 0;
-  width: 22px; height: 22px;
   border-radius: 50%;
-  border: 1.5px solid var(--text);
-  background: transparent;
-  box-shadow:
-    0 0 6px 1px color-mix(in srgb, var(--text) 60%, transparent),
-    0 0 16px 4px color-mix(in srgb, var(--text) 20%, transparent);
   pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: width 0.15s ease, height 0.15s ease, opacity 0.15s ease, border-color 0.2s ease;
+  z-index: 10000;
   opacity: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  will-change: transform;
 }
-.cursor-glow::after {
-  content: '';
-  width: 4px; height: 4px;
-  border-radius: 50%;
+.cursor-dot {
+  width: 6px; height: 6px;
   background: var(--text);
-  transition: background 0.2s ease;
+  transition: opacity 0.2s ease, width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
 }
-.cursor-glow.visible { opacity: 1; }
-.cursor-glow.cursor-hover {
-  width: 34px;
-  height: 34px;
+.cursor-ring {
+  width: 30px; height: 30px;
+  border: 1.5px solid color-mix(in srgb, var(--text) 30%, transparent);
+  background: transparent;
+  transition:
+    width 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    opacity 0.2s ease;
 }
+html.cursor-visible .cursor-dot,
+html.cursor-visible .cursor-ring { opacity: 1; }
+html.cursor-hover .cursor-ring {
+  width: 44px; height: 44px;
+  border-color: var(--accent-eyebrow, var(--accent-nt));
+  background: color-mix(in srgb, var(--accent-eyebrow, var(--accent-nt)) 10%, transparent);
+}
+html.cursor-hover .cursor-dot {
+  width: 4px; height: 4px;
+  background: var(--accent-eyebrow, var(--accent-nt));
+}
+html.cursor-down .cursor-ring { width: 24px; height: 24px; }
+html.cursor-hover.cursor-down .cursor-ring { width: 36px; height: 36px; }
+html.cursor-text .cursor-dot,
+html.cursor-text .cursor-ring { opacity: 0 !important; }
 
 @keyframes skeleton-pulse {
   0%, 100% { opacity: 0.5; }
@@ -1159,4 +1170,205 @@ footer {
   .about-sidebar-nav a { padding: 6px 12px; font-size: 12px; }
   .about-content { padding: 28px 20px; }
   .about-section-title { font-size: 18px; }
+}
+
+
+/* ============================================================
+   LIGHT MODE POLISH
+   Softer palette with readable contrast, gentle depth on cards,
+   and light-specific versions of colours that were tuned for dark.
+   ============================================================ */
+html[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-elevated: #f6f6f8;
+  --border: #e6e6ea;
+  --border-hover: #cdcdd4;
+  --text: #111114;
+  --text-dim: #52525b;
+  --text-faint: #71717a;
+  --nav-bg: rgba(255,255,255,0.86);
+  --accent-nt: #3d5ce0;
+  --accent-trig: #d4581f;
+  --accent-calc: #1f8a45;
+  --accent-comb: #9333d6;
+  --accent-alg: #b07800;
+  --shadow-sm: 0 1px 2px rgba(16,16,24,0.05);
+  --shadow-md: 0 1px 2px rgba(16,16,24,0.04), 0 4px 14px -4px rgba(16,16,24,0.08);
+  --shadow-lg: 0 24px 60px -16px rgba(16,16,24,0.25);
+  color-scheme: light;
+}
+html[data-theme="light"] ::selection { background: color-mix(in srgb, var(--accent-nt) 22%, transparent); color: var(--text); }
+
+/* Nav + banner */
+html[data-theme="light"] nav { box-shadow: 0 1px 0 rgba(16,16,24,0.02); }
+html[data-theme="light"] .nav-quote { opacity: 0.4; }
+html[data-theme="light"] #contributeBanner {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--accent-nt) 6%, #fff),
+    color-mix(in srgb, var(--accent-comb) 6%, #fff));
+  color: var(--text-dim);
+}
+html[data-theme="light"] .chai-btn,
+html[data-theme="light"] .theme-toggle,
+html[data-theme="light"] .menu-toggle { background: #fff; box-shadow: var(--shadow-sm); }
+html[data-theme="light"] .theme-toggle:hover { background: var(--bg-elevated); }
+
+/* Hero */
+html[data-theme="light"] .hero-canvas { opacity: 0.75; }
+html[data-theme="light"] .eyebrow { color: var(--text-dim); }
+html[data-theme="light"] .eyebrow::before { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-eyebrow, var(--accent-nt)) 18%, transparent); }
+html[data-theme="light"] .stat-label { color: var(--text-dim); }
+
+/* Topic cards */
+html[data-theme="light"] .topic-card,
+html[data-theme="light"] .skeleton-card { background: #fff; box-shadow: var(--shadow-md); }
+html[data-theme="light"] .topic-card:hover {
+  border-color: color-mix(in srgb, var(--card-accent) 45%, var(--border));
+  box-shadow: 0 1px 2px rgba(16,16,24,0.04), 0 14px 32px -14px color-mix(in srgb, var(--card-accent) 45%, transparent);
+}
+html[data-theme="light"] .topic-card p { color: var(--text-dim); }
+
+/* Search + filter (segmented control look) */
+html[data-theme="light"] .search-box input { background: #fff; box-shadow: var(--shadow-sm); }
+html[data-theme="light"] .search-box input:focus {
+  border-color: color-mix(in srgb, var(--accent-eyebrow, var(--accent-nt)) 55%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-eyebrow, var(--accent-nt)) 14%, transparent);
+}
+html[data-theme="light"] .pill { color: var(--text-dim); }
+html[data-theme="light"] .pill.active {
+  background: #fff;
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16,16,24,0.08), 0 0 0 1px rgba(16,16,24,0.06);
+}
+
+/* Questions */
+html[data-theme="light"] .q-index { color: var(--text-faint); }
+html[data-theme="light"] .q-item:hover,
+html[data-theme="light"] .q-item.has-link:hover {
+  background: color-mix(in srgb, var(--glow, var(--accent-nt)) 3%, #fff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow, var(--accent-nt)) 30%, transparent),
+              0 8px 24px -14px color-mix(in srgb, var(--glow, var(--accent-nt)) 40%, transparent);
+}
+html[data-theme="light"] .q-item.open {
+  background: #fff;
+  border-bottom-color: transparent;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow, var(--accent-nt)) 28%, transparent),
+              0 10px 30px -16px rgba(16,16,24,0.18);
+}
+html[data-theme="light"] .q-answer-inner {
+  background: var(--bg-elevated);
+  border-color: var(--border);
+  color: #3f3f46;
+  border-left: 2px solid var(--glow, var(--accent-nt));
+}
+html[data-theme="light"] .q-answer-inner .label { color: var(--text-dim); }
+html[data-theme="light"] .share-btn,
+html[data-theme="light"] .img-btn,
+html[data-theme="light"] .solution-btn { background: #fff; color: var(--text-dim); }
+html[data-theme="light"] .share-btn:hover,
+html[data-theme="light"] .img-btn:hover,
+html[data-theme="light"] .solution-btn:hover { color: var(--text); }
+html[data-theme="light"] .diff-easy   .diff-dots i:nth-child(-n+1) { background: #16a34a; }
+html[data-theme="light"] .diff-medium .diff-dots i:nth-child(-n+2) { background: #d97706; }
+html[data-theme="light"] .diff-hard   .diff-dots i:nth-child(-n+3) { background: #dc2626; }
+html[data-theme="light"] .diff-label { color: var(--text-dim); }
+html[data-theme="light"] .q-text::-webkit-scrollbar-thumb,
+html[data-theme="light"] .katex-display::-webkit-scrollbar-thumb { background: var(--border-hover); }
+
+/* Footer */
+html[data-theme="light"] footer { background: var(--bg-elevated); color: var(--text-dim); }
+html[data-theme="light"] .credit { opacity: 1; color: var(--text-faint); }
+html[data-theme="light"] .credit a.support-link { text-decoration-color: rgba(16,16,24,0.25); }
+html[data-theme="light"] .social-link { color: var(--text-dim); }
+html[data-theme="light"] .social-link:hover { background: color-mix(in srgb, var(--accent-nt) 10%, transparent); }
+
+/* Support modal */
+html[data-theme="light"] .support-modal-overlay { background: rgba(16,16,24,0.32); }
+html[data-theme="light"] .support-card { background: #fff; box-shadow: var(--shadow-lg); }
+html[data-theme="light"] .upi-id-box { background: var(--bg-elevated); }
+html[data-theme="light"] .support-live { color: #15803d; background: rgba(22,163,74,0.08); border-color: rgba(22,163,74,0.25); }
+html[data-theme="light"] .support-open-btn { background: linear-gradient(90deg, #3d5ce0, #6a83f0); color: #fff; }
+html[data-theme="light"] .app-toast { background: #fff; box-shadow: var(--shadow-lg); }
+
+/* About page */
+html[data-theme="light"] .about-sidebar-nav a { color: var(--text-dim); }
+html[data-theme="light"] .about-sidebar-nav a.active { background: color-mix(in srgb, var(--accent-nt) 9%, transparent); color: var(--accent-nt); }
+
+/* ============================================================
+   RESPONSIVE: TABLETS (iPad) AND PHONES
+   ============================================================ */
+.nav-links a { white-space: nowrap; }
+.q-meta { flex-wrap: wrap; align-items: center; }
+
+/* Tablets and small laptops: the full link row no longer fits beside the
+   logo, so switch to the collapsible menu (previously only on phones). */
+@media (max-width: 1024px) {
+  nav { flex-wrap: wrap; padding: 14px 28px; }
+  .nav-quote { display: none; }
+  .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .nav-links {
+    display: none;
+    width: 100%;
+    order: 3;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { padding: 11px 12px; font-size: 15px; border-radius: 8px; }
+  .nav-links a.active { background: var(--bg-elevated); }
+  .hero { padding: 72px 28px 56px; }
+  .controls, main, .topic-grid { padding-left: 28px; padding-right: 28px; }
+}
+
+/* iPad portrait/landscape: two-column link menu, roomier tap targets */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .nav-links.open { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; }
+  .hero-canvas { width: 380px; height: 380px; right: -80px; }
+  .share-btn, .solution-btn, .img-btn { padding: 5px 10px; font-size: 11.5px; }
+}
+
+/* Phones */
+@media (max-width: 640px) {
+  nav { padding: 12px 16px; }
+  .hero { padding: 44px 18px 32px; }
+  .hero p { font-size: 16px; }
+  .hero-canvas { opacity: 0.3; width: 320px; height: 320px; top: -20px; right: -120px; }
+  .hero-stats { margin-top: 32px; }
+  .controls, main, .topic-grid { padding-left: 16px; padding-right: 16px; }
+  .topic-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .topic-card { padding: 18px; }
+  .topic-card .topic-icon { margin-bottom: 14px; }
+  .topic-card h3 { font-size: 15.5px; }
+  .filter-pills { width: 100%; }
+  .pill { flex: 1; padding: 9px 0; text-align: center; }
+  .q-item { padding: 16px 10px; }
+  .q-meta { gap: 6px; margin-top: 12px; }
+  .share-btn, .solution-btn, .img-btn { padding: 7px 9px; font-size: 11px; border-radius: 6px; }
+  .q-body { min-width: 0; }
+  .q-answer-inner { font-size: 13.5px; padding: 12px 14px; }
+  #contributeBanner { font-size: 12.5px; padding: 9px 14px; }
+  .chai-btn { padding: 6px 11px; }
+  footer { padding: 28px 16px calc(28px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+  .topic-grid { grid-template-columns: 1fr; }
+  .chai-btn { display: none; }
+}
+
+/* Touch screens: hover effects stick after a tap, so turn them off and
+   give the opened question a clear outline instead. */
+@media (hover: none) {
+  .topic-card:hover { transform: none; }
+  .q-item:not(.open):hover { background: transparent; box-shadow: none; }
+  html[data-theme="light"] .q-item:not(.open):hover { background: transparent; box-shadow: none; }
+  .q-item.open { box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow, var(--accent-nt)) 35%, transparent); }
+  html[data-theme="light"] .q-item.open {
+    background: #fff;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow, var(--accent-nt)) 28%, transparent),
+                0 10px 30px -16px rgba(16,16,24,0.18);
+  }
 }
