@@ -728,69 +728,17 @@ function renderSkeleton(container, count) {
   container.appendChild(list);
 }
 
-// ============================================================
-// DIFFICULTY DONUT CHART
-// Renders a small SVG donut in the hero-stats area showing
-// the easy / medium / hard breakdown for the current topic.
-// ============================================================
-function renderDifficultyChart(questions) {
-  const container = document.querySelector('.hero-stats');
-  if (!container) return;
-
-  const counts = { easy: 0, medium: 0, hard: 0 };
-  questions.forEach(q => counts[q.difficulty]++);
-  const total = questions.length;
-  if (total === 0) return;
-
-  const size = 72;
-  const stroke = 9;
-  const radius = (size - stroke) / 2;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const colors = { easy: 'var(--diff-easy)', medium: 'var(--diff-medium)', hard: 'var(--diff-hard)' };
-  const order = ['easy', 'medium', 'hard'];
-
-  let offset = 0;
-  const segments = order.filter(d => counts[d] > 0).map(d => {
-    const pct = counts[d] / total;
-    const dash = pct * circumference;
-    const seg = { key: d, count: counts[d], color: colors[d], dash: dash, gap: circumference - dash, offset: offset };
-    offset += dash;
-    return seg;
-  });
-
-  const circles = segments.map(s =>
-    `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" style="stroke:${s.color}" stroke-width="${stroke}" stroke-dasharray="${s.dash} ${s.gap}" stroke-dashoffset="-${s.offset}" transform="rotate(-90 ${cx} ${cy})" stroke-linecap="round" />`
-  ).join('');
-
-  const legend = segments.map(s =>
-    `<div class="chart-legend-row">
-      <span class="chart-legend-dot" style="background:${s.color}"></span>
-      <span class="chart-legend-count">${s.count}</span>
-      <span class="chart-legend-label">${s.key}</span>
-    </div>`
-  ).join('');
-
-  const el = document.createElement('div');
-  el.className = 'difficulty-chart';
-  el.innerHTML = `
-    <svg class="donut-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="var(--border)" stroke-width="${stroke}" />
-      ${circles}
-    </svg>
-    <div class="chart-legend">${legend}</div>
-  `;
-  container.appendChild(el);
-}
-
+// (Difficulty donut chart removed in the redesign: see renderStats in initTopicPage)
 // ============================================================
 // SINGLE-TOPIC PAGE LOGIC
 // Call initTopicPage("trigonometry") from that page's inline script.
 // ============================================================
 function initTopicPage(topicKey) {
-  const main = document.getElementById('main');
+  const main = document.getElementById('questionList') || document.getElementById('main');
+  const topicDef = Object.values(TOPICS).find(t => t.key === topicKey);
+  const headIcon = document.getElementById('topicHeadIcon');
+  if (headIcon && topicDef) headIcon.innerHTML = topicDef.icon;
+  renderPager();
   let allQuestions = [];
   let accent = 'var(--accent-nt)';
   let topicLabel = '';
@@ -832,7 +780,7 @@ function initTopicPage(topicKey) {
     renderMath(main);
   }
 
-  // Shows "N solved" next to the question count (SHOW_PROGRESS only).
+  // Shows "N solved" in the stats row (SHOW_PROGRESS only).
   function updateSolvedCount() {
     const el = document.getElementById('stat-solved');
     if (!el) return;
@@ -840,13 +788,31 @@ function initTopicPage(topicKey) {
     el.textContent = allQuestions.filter(q => solved.has(q.id)).length;
   }
 
-  function renderSolvedStat() {
-    const stats = document.querySelector('.hero-stats');
-    if (!SHOW_PROGRESS || !stats || document.getElementById('stat-solved')) return;
-    const wrap = document.createElement('div');
-    wrap.innerHTML = '<div class="stat-num" id="stat-solved">0</div><div class="stat-label">solved</div>';
-    stats.appendChild(wrap);
+  // Slim stats row: question count, solved count, difficulty split.
+  function renderStats() {
+    const box = document.getElementById('topicStats');
+    if (!box) return;
+    const c = { easy: 0, medium: 0, hard: 0 };
+    allQuestions.forEach(q => { c[q.difficulty]++; });
+    box.innerHTML = `
+      <div class="ts-item"><span class="ts-num" id="stat-count">${allQuestions.length}</span><span class="ts-label">question${allQuestions.length !== 1 ? 's' : ''}</span></div>
+      ${SHOW_PROGRESS ? '<div class="ts-item"><span class="ts-num" id="stat-solved">0</span><span class="ts-label">solved</span></div>' : ''}
+      ${allQuestions.length ? `<div class="ts-diff">${diffBarHTML(c)}
+        <div class="ts-legend">${['easy', 'medium', 'hard'].map(d => `<span><i class="db-${d}"></i>${c[d]} ${d}</span>`).join('')}</div></div>` : ''}`;
     updateSolvedCount();
+  }
+
+  // Previous / next topic links at the bottom of the page.
+  function renderPager() {
+    const pager = document.getElementById('topicPager');
+    if (!pager) return;
+    const list = Object.values(TOPICS);
+    const i = list.findIndex(t => t.key === topicKey);
+    const prev = list[i - 1], next = list[i + 1];
+    const link = (t, dir) => t ? `<a class="pager-link pager-${dir}" href="../${t.key}/" style="--card-accent:${t.accent}">
+        <span class="pager-dir">${dir === 'prev' ? '← Previous topic' : 'Next topic →'}</span>
+        <span class="pager-name"><span class="pager-ic">${t.icon}</span>${t.label}</span></a>` : '<span></span>';
+    pager.innerHTML = link(prev, 'prev') + link(next, 'next');
   }
 
   // Adds a live count to each filter pill, e.g. "Easy 4".
@@ -873,11 +839,7 @@ function initTopicPage(topicKey) {
       accent = section ? section.accent : accent;
       topicLabel = section ? section.label : '';
 
-      const countEl = document.getElementById('stat-count');
-      if (countEl) countEl.textContent = allQuestions.length;
-
-      renderSolvedStat();
-      renderDifficultyChart(allQuestions);
+      renderStats();
       renderPillCounts();
 
       // If the URL has ?q=<id>, make sure filters don't hide it, then scroll + highlight
@@ -931,42 +893,62 @@ function initTopicPage(topicKey) {
 // ============================================================
 function initLandingPage() {
   const grid = document.getElementById('topicGrid');
-
+  if (!grid) return;
   grid.innerHTML = Object.keys(TOPICS).map(() => `
-    <div class="skeleton-card">
-      <div class="skeleton-circle"></div>
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line"></div>
-    </div>
-  `).join('');
+    <div class="topic-card is-skeleton" aria-hidden="true">
+      <div class="sk sk-icon"></div><div class="sk sk-line" style="width:55%"></div>
+      <div class="sk sk-line" style="width:80%"></div><div class="sk sk-bar"></div>
+    </div>`).join('');
 
   waitForLibs(() => {
     loadData().then(data => {
       const total = Object.values(data).reduce((sum, s) => sum + s.questions.length, 0);
-      const totalEl = document.getElementById('stat-total');
-      const topicsEl = document.getElementById('stat-topics');
-      if (totalEl) totalEl.textContent = total;
-      if (topicsEl) topicsEl.textContent = Object.keys(TOPICS).length;
+      const heroCount = document.getElementById('heroCount');
+      if (heroCount) heroCount.textContent = total;
+      const statLine = document.getElementById('statLine');
+      const live = Object.values(TOPICS).filter(t => (data[t.key] ? data[t.key].questions.length : 0) > 0).length;
+      if (statLine) statLine.textContent = `${total} questions · ${live} topics`;
 
-      grid.innerHTML = '';
-      Object.values(TOPICS).forEach(topic => {
-        const count = data[topic.key] ? data[topic.key].questions.length : 0;
-        const card = document.createElement('a');
-        card.href = `${topic.key}/`;
-        card.className = 'topic-card';
-        card.style.setProperty('--card-accent', topic.accent);
-        card.innerHTML = `
-          <div class="topic-icon" style="background:${topic.accentBg}; color:${topic.accent}">${topic.icon}</div>
+      grid.innerHTML = Object.values(TOPICS).map(topic => {
+        const qs = data[topic.key] ? data[topic.key].questions : [];
+        const n = qs.length;
+        if (!n) {
+          return `<a class="topic-card is-soon" href="${topic.key}/" style="--card-accent:${topic.accent}">
+            <div class="tc-head"><span class="topic-icon">${topic.icon}</span><span class="badge">Coming soon</span></div>
+            <h3>${topic.label}</h3>
+            <p class="tc-tag">${topic.tagline}</p>
+            <div class="diffbar is-empty" aria-hidden="true"></div>
+            <div class="tc-foot"><span>Problems on the way</span><span class="tc-arrow" aria-hidden="true">→</span></div>
+          </a>`;
+        }
+        const c = { easy: 0, medium: 0, hard: 0 };
+        qs.forEach(q => { c[q.difficulty]++; });
+        const solvedSet = getSolvedSet(topic.key);
+        const solved = qs.filter(q => solvedSet.has(q.id)).length;
+        return `<a class="topic-card" href="${topic.key}/" style="--card-accent:${topic.accent}">
+          <div class="tc-head"><span class="topic-icon">${topic.icon}</span><span class="tc-count">${n} question${n !== 1 ? 's' : ''}</span></div>
           <h3>${topic.label}</h3>
-          <p>${count} question${count !== 1 ? 's' : ''}</p>
-        `;
-        grid.appendChild(card);
-      });
+          <p class="tc-tag">${topic.tagline}</p>
+          ${diffBarHTML(c)}
+          <div class="tc-foot">
+            <span>${SHOW_PROGRESS ? `<b>${solved}</b> / ${n} solved` : ''}</span>
+            <span class="tc-arrow" aria-hidden="true">→</span>
+          </div>
+        </a>`;
+      }).join('');
     }).catch(err => {
       console.error("Failed to load questions:", err);
       grid.innerHTML = '<div class="empty-state">Could not load topics right now. Check back shortly.</div>';
     });
   });
+}
+
+// A thin easy/medium/hard bar used on topic cards and the topic header.
+function diffBarHTML(c) {
+  const label = `${c.easy} easy, ${c.medium} medium, ${c.hard} hard`;
+  return `<div class="diffbar" role="img" aria-label="${label}">${
+    ['easy', 'medium', 'hard'].map(d => c[d] ? `<span class="db-${d}" style="flex:${c[d]}"></span>` : '').join('')
+  }</div>`;
 }
 
 // ============================================================
@@ -1102,7 +1084,9 @@ function initTopicMenu() {
     <ul class="goo-list" id="gooMenu" role="menu" aria-label="Topics">
       ${items.map((it, i) => `${it.sep ? '<li class="goo-sep" role="separator"></li>' : ''}<li role="none" style="--i:${i}"><a role="menuitem" tabindex="-1" href="${it.href}" class="goo-item${it.active ? ' active' : ''}" style="--item-accent:${it.accent}"${it.active ? ' aria-current="page"' : ''}><span class="goo-ic">${it.icon}</span><span class="goo-text">${it.label}</span>${it.active ? '<span class="goo-dot" aria-hidden="true"></span>' : ''}</a></li>`).join('')}
     </ul>`;
-  controls.appendChild(wrap);
+  const mount = document.getElementById('topicMenuMount');
+  if (mount) { mount.appendChild(wrap); wrap.classList.add('goo--left'); }
+  else controls.appendChild(wrap);
   document.documentElement.classList.add('has-goo');
 
   const trigger = wrap.querySelector('.goo-trigger');
@@ -1122,7 +1106,7 @@ function initTopicMenu() {
     if (pw && ph) {
       wrap.style.setProperty('--sx', Math.min(1, (tw * 0.6) / pw).toFixed(4));
       wrap.style.setProperty('--sy', Math.min(1, (th * 0.6) / ph).toFixed(4));
-      wrap.style.setProperty('--ox', (pw - tw / 2) + 'px');
+      wrap.style.setProperty('--ox', (wrap.classList.contains('goo--left') ? tw / 2 : pw - tw / 2) + 'px');
     }
   }
   layout();
@@ -1471,6 +1455,12 @@ function initSpotlightSearch() {
   }
 
   if (trigger) trigger.addEventListener('click', open);
+  const heroSearch = document.getElementById('heroSearch');
+  if (heroSearch) {
+    heroSearch.addEventListener('click', open);
+    const hk = heroSearch.querySelector('.hs-kbd');
+    if (hk) hk.textContent = isMac ? '⌘K' : 'Ctrl K';
+  }
   document.addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); (overlay && !overlay.hidden) ? close() : open(); return; }
@@ -1498,7 +1488,7 @@ function initThemeToggle() {
       document.head.appendChild(meta);
     }
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    meta.content = isLight ? '#ffffff' : '#0a0a0b';
+    meta.content = isLight ? '#f6f7f9' : '#0b0b0e';
   }
   syncThemeColor();
 
@@ -1573,6 +1563,7 @@ function initSupportCard() {
   const closeModal = () => overlay.classList.remove('open');
 
   chaiBtn.addEventListener('click', openModal);
+  document.querySelectorAll('[data-open-support]').forEach(el => el.addEventListener('click', openModal));
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeModal(); // click on the dark backdrop, not the card itself
@@ -1659,15 +1650,6 @@ function initMathEasterEgg() {
 const SHOW_CONTRIBUTE = true; // set to false to hide the banner globally
 const CONTRIBUTE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform";
 function initContributeBanner() {
-  if (!SHOW_CONTRIBUTE) return;
-
-  const banner = document.createElement('div');
-  banner.id = 'contributeBanner';
-  banner.innerHTML = `
-    <span class="contribute-text">
-      💡 Know a great problem?
-      <a href="${CONTRIBUTE_FORM_URL}" target="_blank" rel="noopener" class="contribute-link">Suggest a question →</a>
-    </span>
-  `;
-  document.body.prepend(banner);
+  // The top "Suggest a question" strip was removed in the redesign; the link
+  // now lives in the footer. Kept as a no-op so older pages don't break.
 }
