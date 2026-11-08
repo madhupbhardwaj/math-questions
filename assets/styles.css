@@ -50,6 +50,12 @@
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   --page-accent: var(--accent-nt);
+
+  /* Page background (grid + glow + illustration) */
+  --grid-minor: rgba(255, 255, 255, 0.035);
+  --grid-major: rgba(255, 255, 255, 0.06);
+  --glow-strength: 20%;
+  --motif-opacity: 0.42;
   color-scheme: dark;
 }
 
@@ -81,6 +87,11 @@ html[data-theme="light"] {
   --shadow-1: 0 1px 2px rgba(16, 18, 27, 0.06);
   --shadow-2: 0 1px 2px rgba(16, 18, 27, 0.04), 0 8px 22px -10px rgba(16, 18, 27, 0.14);
   --shadow-pop: 0 24px 60px -16px rgba(16, 18, 27, 0.25), 0 0 0 1px rgba(16, 18, 27, 0.04);
+
+  --grid-minor: rgba(16, 18, 27, 0.045);
+  --grid-major: rgba(16, 18, 27, 0.075);
+  --glow-strength: 13%;
+  --motif-opacity: 0.5;
   color-scheme: light;
 }
 
@@ -104,8 +115,48 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
-main { flex: 1; }
+main { flex: 1; position: relative; z-index: 1; }
+.site-footer { position: relative; z-index: 1; }
+
+/* ---------- Page background: fading maths grid + accent glow + illustration ---------- */
+.bg-layer {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 760px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.bg-grid, .bg-glow { position: absolute; inset: 0; }
+.bg-grid {
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size: 160px 160px, 160px 160px, 32px 32px, 32px 32px;
+  background-position: center -1px;
+  -webkit-mask-image: radial-gradient(ellipse 75% 70% at 60% 0%, #000 25%, transparent 78%);
+          mask-image: radial-gradient(ellipse 75% 70% at 60% 0%, #000 25%, transparent 78%);
+}
+.bg-glow {
+  background:
+    radial-gradient(42% 55% at 78% 4%, color-mix(in srgb, var(--page-accent) var(--glow-strength), transparent), transparent 72%),
+    radial-gradient(30% 40% at 8% 0%, color-mix(in srgb, var(--page-accent) calc(var(--glow-strength) * 0.5), transparent), transparent 70%);
+}
+.bg-motif {
+  position: absolute;
+  top: 70px;
+  right: max(-40px, calc(50% - 640px));
+  width: 560px; height: auto;
+  color: var(--page-accent);
+  opacity: var(--motif-opacity);
+  -webkit-mask-image: radial-gradient(ellipse 60% 62% at 60% 45%, #000 45%, transparent 78%);
+          mask-image: radial-gradient(ellipse 60% 62% at 60% 45%, #000 45%, transparent 78%);
+}
+/* Topic pages: the illustration sits beside the compact header */
+body:has(.page-topic) .bg-motif { top: -64px; width: 520px; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
 img { max-width: 100%; }
@@ -407,11 +458,6 @@ html[data-theme="light"] .goo {
    ========================================================================== */
 .home-hero { position: relative; padding-top: 72px; padding-bottom: 48px; overflow: hidden; }
 .home-hero > * { position: relative; }
-.home-hero .hero-canvas {
-  position: absolute; top: -10px; right: -40px;
-  width: 440px; height: 440px;
-  opacity: 0.55; pointer-events: none;
-}
 .home-hero h1 { max-width: 660px; }
 .home-hero .lede { margin-top: 18px; }
 .hero-search {
@@ -1019,10 +1065,10 @@ html.cursor-text .cursor-dot, html.cursor-text .cursor-ring { opacity: 0 !import
 }
 
 @media (max-width: 1024px) {
+  .bg-motif { width: 460px; right: -80px; --motif-opacity: 0.32; opacity: 0.32; }
   .st-label, .st-kbd { display: none; }
   .search-trigger { width: var(--control-h); padding: 0; justify-content: center; }
-  .home-hero .hero-canvas { width: 360px; height: 360px; right: -90px; opacity: 0.4; }
-}
+  }
 
 @media (max-width: 860px) {
   .about-layout { grid-template-columns: 1fr; gap: 16px; }
@@ -1040,6 +1086,9 @@ html.cursor-text .cursor-dot, html.cursor-text .cursor-ring { opacity: 0 !import
 
 @media (max-width: 640px) {
   :root { --gutter: 16px; --control-h: 34px; }
+  .bg-layer { height: 560px; }
+  .bg-grid { background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px; }
+  .bg-motif { width: 340px; top: 56px; right: -110px; opacity: 0.22; }
   body { font-size: 14.5px; }
   .nav { height: 58px; gap: 8px; }
   .nav-left { gap: 10px; }
@@ -1053,8 +1102,7 @@ html.cursor-text .cursor-dot, html.cursor-text .cursor-ring { opacity: 0 !import
   .toolbar { top: 58px; }
 
   .home-hero { padding-top: 44px; padding-bottom: 32px; }
-  .home-hero .hero-canvas { opacity: 0.25; width: 300px; height: 300px; right: -130px; }
-  .lede { font-size: 15.5px; }
+    .lede { font-size: 15.5px; }
   .hero-search { height: 48px; }
   .hs-kbd { display: none; }
   .topic-card { padding: 16px; }
