@@ -26,7 +26,7 @@
 <meta name="twitter:image" content="https://problemset.in/assets/og-image.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon/favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon/favicon.svg?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon/favicon-32.png?v=2">
@@ -35,130 +35,152 @@
 <meta name="apple-mobile-web-app-title" content="problemset">
 <meta name="application-name" content="problemset">
 <meta name="theme-color" content="#0a0a0b">
-<link rel="stylesheet" href="../assets/styles.css?v=20261108e">
-<style>
-  :root { --accent-eyebrow: var(--accent-nt); }
-</style>
+<link rel="stylesheet" href="../assets/styles.css?v=20261109a">
 </head>
-<body>
+<body data-accent="nt">
+<a class="skip-link" href="#content">Skip to content</a>
 
-<nav>
-  <div class="logo-group">
-    <a class="logo" href="../" aria-label="Go to homepage">
-      <span class="logo-mark">∑</span>
-      problemset
-    </a>
-    <button class="chai-btn" id="chaiBtn">☕ Chai</button>
-  </div>
-  <div class="nav-controls">
-    <button class="search-trigger" id="searchTrigger" type="button" aria-label="Search all questions" aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K">
-      <svg class="st-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-      <span class="st-label">Search</span>
-      <kbd class="st-kbd">⌘K</kbd>
-    </button>
-    <button class="theme-toggle liquid-toggle" id="themeToggle" type="button" role="switch" aria-checked="true" aria-label="Dark mode">
-      <span class="lt-blob" aria-hidden="true"></span>
-      <svg class="lt-icon lt-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
-      <svg class="lt-icon lt-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.6 6.6 0 0 0 9.7 9.7z"/></svg>
-    </button>
-    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-  </div>
-  <div class="nav-links">
-    <a href="../number-theory/">Number Theory</a>
-    <a href="../trigonometry/">Trigonometry</a>
-    <a href="../calculus/">Calculus</a>
-    <a href="../combinatorics/">Combinatorics</a>
-    <a href="../algebra/">Algebra</a>
-    <a href="../about/" class="active">About</a>
-  </div>
-</nav>
-
-<div class="hero">
-  <a href="../" class="back-link">← All topics</a>
-  <div class="eyebrow">ABOUT</div>
-  <h1>Not just a set <span class="accent">of problems.</span></h1>
-</div>
-
-<div class="about-layout">
-  <aside class="about-sidebar">
-    <div class="about-sidebar-label">About</div>
-    <nav class="about-sidebar-nav">
-      <a href="#purpose" class="active">Purpose</a>
-      <a href="#philosophy">Philosophy</a>
-      <a href="#how-it-works">How it works</a>
-      <a href="#scope">Scope</a>
-      <a href="#author">Author</a>
-    </nav>
-  </aside>
-
-  <main class="about-content">
-
-    <section class="about-section" id="purpose">
-      <div class="about-section-title">Purpose</div>
-      <div class="about-section-bar" style="background: var(--accent-nt);"></div>
-      <p>Most problem banks optimise for volume — thousands of questions, endless drilling, a race to the next one. This isn't that. <strong>problemset is small on purpose.</strong></p>
-      <p>Every question here earned its place because I found it genuinely interesting to think about, not just to solve. The goal is focused practice, not endless scrolling.</p>
-    </section>
-
-    <div class="about-callout">The problems worth keeping are the ones that ask you to think outside the general criteria of problem solving.</div>
-
-    <section class="about-section" id="philosophy">
-      <div class="about-section-title">Philosophy</div>
-      <div class="about-section-bar" style="background: var(--accent-trig);"></div>
-      <p>A good problem doesn't just test whether you know a formula — it asks you to see something. To notice a structure, reframe a question, or find the one observation that makes everything else fall into place.</p>
-      <p>Those are the problems collected here: ones that reward a shift in perspective rather than a memorised procedure.</p>
-    </section>
-
-    <section class="about-section" id="how-it-works">
-      <div class="about-section-title">How it works</div>
-      <div class="about-section-bar" style="background: var(--accent-calc);"></div>
-      <p>Questions are organised by topic — number theory, trigonometry, calculus, combinatorics, and algebra — each with its own colour. Click any question to reveal its answer; where a worked video solution exists, you'll find a link to it.</p>
-      <p>You can filter by difficulty, search within a topic, share a direct link to any single problem, or copy a question as a clean image to send to a friend.</p>
-    </section>
-
-    <section class="about-section" id="scope">
-      <div class="about-section-title">Scope</div>
-      <div class="about-section-bar" style="background: var(--accent-comb);"></div>
-      <p>The set is <strong>currently pitched at the undergraduate level</strong>, covering five topics. It grows as I do — I add problems as my own mathematics deepens.</p>
-    </section>
-
-    <section class="about-section" id="author">
-      <div class="about-section-title">Author</div>
-      <div class="about-section-bar" style="background: var(--accent-alg);"></div>
-      <p>I'm Madhup. I built problemset because these problems mattered to me and I wanted a good home for them. If you know a problem you think belongs here, I'd love to see it — and if something looks off, tell me.</p>
-      <p>Reach me on Discord at <strong>@madhupbhardwaj</strong>, follow along on <a class="inline-link" href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram</a>, or email <a class="inline-link" href="mailto:support@problemset.in">support@problemset.in</a>.</p>
-      <div class="about-cta">
-        <a class="primary" href="../">Browse the problems</a>
-        <a href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram channel</a>
+<header class="site-header">
+  <nav class="nav container" aria-label="Main">
+    <div class="nav-left">
+      <a class="logo" href="../" aria-label="problemset home">
+        <span class="logo-mark" aria-hidden="true">∑</span>
+        <span class="logo-word">problemset</span>
+      </a>
+      <div class="nav-primary">
+        <div id="topicMenuMount" class="topic-menu-mount"></div>
+        <a class="nav-link is-active" href="../about/" aria-current="page">About</a>
       </div>
-    </section>
+    </div>
+    <div class="nav-controls">
+      <button class="search-trigger" id="searchTrigger" type="button" aria-label="Search all questions" aria-haspopup="dialog" aria-keyshortcuts="Meta+K Control+K">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <span class="st-label">Search</span>
+        <kbd class="st-kbd">⌘K</kbd>
+      </button>
+      <button class="theme-toggle liquid-toggle" id="themeToggle" type="button" role="switch" aria-checked="true" aria-label="Dark mode">
+        <span class="lt-blob" aria-hidden="true"></span>
+        <svg class="lt-icon lt-sun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+        <svg class="lt-icon lt-moon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.6 6.6 0 0 0 9.7 9.7z"/></svg>
+      </button>
+      <button class="chai-btn" id="chaiBtn" type="button" aria-label="Support this project (buy a chai)" title="Buy me a chai">☕</button>
+    </div>
+    <!-- Plain links: used to build the Topics menu, and the fallback without JavaScript -->
+    <div class="nav-links">
+      <a href="../number-theory/">Number Theory</a>
+      <a href="../trigonometry/">Trigonometry</a>
+      <a href="../calculus/">Calculus</a>
+      <a href="../combinatorics/">Combinatorics</a>
+      <a href="../algebra/">Algebra</a>
+      <a href="../about/" class="active">About</a>
+    </div>
+  </nav>
+</header>
 
-  </main>
-</div>
+<main id="content" class="page page-about container">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="../">Home</a><span aria-hidden="true">/</span><span aria-current="page">About</span>
+  </nav>
+  <header class="page-head">
+    <h1>Not just a set <span class="accent">of problems.</span></h1>
+    <p class="lede">Why problemset exists, how it works, and who's behind it.</p>
+  </header>
 
-<footer>
-  problemset — built for practice, not perfection.
-  <div class="social-links">
-    <a href="https://t.me/problemset_official" target="_blank" rel="noopener" aria-label="Telegram" class="social-link">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21.5 3.5 2.7 10.9c-1.2.5-1.2 1.2-.2 1.5l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.2-2.1 4.5 3.3c.8.5 1.4.2 1.6-.8l3-14.1c.3-1.3-.5-1.9-1.7-1.6zM8.3 13.5l9.3-5.9c.4-.3.8-.1.5.2l-7.8 7.1-.3 3.3-1.7-4.7z"/></svg>
-    </a>
-    <a href="mailto:support@problemset.in" aria-label="Email" class="social-link">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg>
-    </a>
+  <div class="about-layout">
+    <aside class="about-sidebar" aria-label="On this page">
+      <p class="about-sidebar-label">On this page</p>
+      <nav class="about-sidebar-nav">
+        <a href="#purpose" class="active">Purpose</a>
+        <a href="#philosophy">Philosophy</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#scope">Scope</a>
+        <a href="#author">Author</a>
+      </nav>
+    </aside>
+    <div class="about-content">
+      <section class="about-section" id="purpose" style="--sec-accent: var(--accent-nt)">
+        <h2 class="about-section-title">Purpose</h2>
+        <p>Most problem banks optimise for volume — thousands of questions, endless drilling, a race to the next one. This isn't that. <strong>problemset is small on purpose.</strong></p>
+        <p>Every question here earned its place because I found it genuinely interesting to think about, not just to solve. The goal is focused practice, not endless scrolling.</p>
+      </section>
+      <blockquote class="about-callout">The problems worth keeping are the ones that ask you to think outside the general criteria of problem solving.</blockquote>
+      <section class="about-section" id="philosophy" style="--sec-accent: var(--accent-trig)">
+        <h2 class="about-section-title">Philosophy</h2>
+        <p>A good problem doesn't just test whether you know a formula — it asks you to see something. To notice a structure, reframe a question, or find the one observation that makes everything else fall into place.</p>
+        <p>Those are the problems collected here: ones that reward a shift in perspective rather than a memorised procedure.</p>
+      </section>
+      <section class="about-section" id="how-it-works" style="--sec-accent: var(--accent-calc)">
+        <h2 class="about-section-title">How it works</h2>
+        <p>Questions are organised by topic — number theory, trigonometry, calculus, combinatorics and algebra — each with its own colour. Click any question to reveal its answer; where a worked video solution exists, you'll find a link to it.</p>
+        <p>Search every question with <kbd>⌘K</kbd>, filter by difficulty, mark problems as solved, share a direct link to any single problem, or copy a question as a clean image to send to a friend.</p>
+      </section>
+      <section class="about-section" id="scope" style="--sec-accent: var(--accent-comb)">
+        <h2 class="about-section-title">Scope</h2>
+        <p>The set is <strong>currently pitched at the undergraduate level</strong>, covering five topics. It grows as I do — I add problems as my own mathematics deepens.</p>
+      </section>
+      <section class="about-section" id="author" style="--sec-accent: var(--accent-alg)">
+        <h2 class="about-section-title">Author</h2>
+        <p>I'm Madhup. I built problemset because these problems mattered to me and I wanted a good home for them. If you know a problem you think belongs here, I'd love to see it — and if something looks off, tell me.</p>
+        <p>Reach me on Discord at <strong>@madhupbhardwaj</strong>, follow along on <a class="inline-link" href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram</a>, or email <a class="inline-link" href="mailto:support@problemset.in">support@problemset.in</a>.</p>
+        <div class="about-cta">
+          <a class="btn btn-primary" href="../">Browse the problems</a>
+          <a class="btn btn-secondary" href="https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform" target="_blank" rel="noopener">Suggest a question</a>
+          <a class="btn btn-secondary" href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram channel</a>
+        </div>
+      </section>
+    </div>
   </div>
+</main>
 
-  <div class="credit">Built by Madhup · <a href="mailto:support@problemset.in" class="support-link">Support</a></div>
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a class="logo" href="../" aria-label="problemset home">
+        <span class="logo-mark" aria-hidden="true">∑</span>
+        <span class="logo-word">problemset</span>
+      </a>
+      <p class="footer-tagline">Built for practice, not perfection.</p>
+      <p class="footer-quote">“not just a set of problems”</p>
+    </div>
+    <div class="footer-col">
+      <h2 class="footer-head">Topics</h2>
+      <ul>
+          <li><a href="../number-theory/">Number Theory</a></li>
+          <li><a href="../trigonometry/">Trigonometry</a></li>
+          <li><a href="../calculus/">Calculus</a></li>
+          <li><a href="../combinatorics/">Combinatorics</a></li>
+          <li><a href="../algebra/">Algebra</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h2 class="footer-head">Project</h2>
+      <ul>
+        <li><a href="../about/">About</a></li>
+        <li><a href="https://docs.google.com/forms/d/e/1FAIpQLScaugl3z372IpP0eLkylh8d1bLmPWjiJDyuCIFc8G3bw4Rspw/viewform" target="_blank" rel="noopener">Suggest a question</a></li>
+        <li><button type="button" class="footer-linkbtn" data-open-support>Support with a chai ☕</button></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h2 class="footer-head">Connect</h2>
+      <ul>
+        <li><a href="https://t.me/problemset_official" target="_blank" rel="noopener">Telegram</a></li>
+        <li><a href="mailto:support@problemset.in">support@problemset.in</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>© 2026 problemset</span>
+    <span>Built by Madhup</span>
+  </div>
 </footer>
 
 <div class="support-modal-overlay" id="supportModalOverlay">
-  <div class="support-card" id="supportCard">
-    <button class="support-close-btn" id="supportCloseBtn" aria-label="Close">
+  <div class="support-card" id="supportCard" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
+    <button class="support-close-btn" id="supportCloseBtn" type="button" aria-label="Close">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
     <div class="support-header">
-      <h3>Support this project</h3>
+      <h3 id="supportTitle">Support this project</h3>
       <span class="support-live">LIVE</span>
     </div>
     <p class="support-subtext">Instant. Direct. No middlemen.</p>
@@ -168,7 +190,7 @@
         <span class="upi-label">UPI ID</span>
         <span class="upi-value" id="upiIdText">madhupji@fam</span>
       </div>
-      <button class="copy-btn" id="copyUpiBtn">
+      <button class="copy-btn" id="copyUpiBtn" type="button">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Copy
       </button>
@@ -186,34 +208,31 @@
   </div>
 </div>
 
-<script src="../assets/app.js?v=20261108e"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="../assets/app.js?v=20261109a"></script>
 <script>
+  
   initCursorGlow();
   initTopicMenu();
   initSupportCard();
   initThemeToggle();
   initSpotlightSearch();
   initMathEasterEgg();
-  initContributeBanner();
   initTabAwayMessage(["Come back! 👋", "Your questions miss you 🥲", "∑ waiting for you..."]);
 
-  // Scroll-spy: highlight the sidebar link matching the currently visible section
+  // Scroll-spy: highlight the sidebar link for the section in view
   (function() {
     var links = document.querySelectorAll('.about-sidebar-nav a');
-    var sections = document.querySelectorAll('.about-section[id], .about-callout');
-    if (!links.length || !sections.length) return;
+    var sections = document.querySelectorAll('.about-section[id]');
+    if (!links.length || !sections.length || !('IntersectionObserver' in window)) return;
     var observer = new IntersectionObserver(function(entries) {
       entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          var id = entry.target.id;
-          if (!id) return;
-          links.forEach(function(a) {
-            a.classList.toggle('active', a.getAttribute('href') === '#' + id);
-          });
-        }
+        if (!entry.isIntersecting) return;
+        var id = entry.target.id;
+        links.forEach(function(a) { a.classList.toggle('active', a.getAttribute('href') === '#' + id); });
       });
     }, { rootMargin: '-20% 0px -60% 0px' });
-    sections.forEach(function(s) { if (s.id) observer.observe(s); });
+    sections.forEach(function(s) { observer.observe(s); });
   })();
 </script>
 
