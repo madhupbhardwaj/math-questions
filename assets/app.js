@@ -11,7 +11,7 @@ const TOPICS = {
     key: "number-theory",
     label: "Number Theory",
     tagline: "Primes, divisibility, modular arithmetic.",
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 9v6"/></svg>',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12h3.5V8.5h-7v7H19V5H5v14h14" opacity="0.32" stroke-width="1.2"/><circle cx="12" cy="12" r="0.9" fill="currentColor" stroke="none" opacity="0.45"/><g fill="currentColor" stroke="none"><circle cx="15.5" cy="12" r="1.45"/><circle cx="15.5" cy="8.5" r="1.45"/><circle cx="8.5" cy="8.5" r="1.45"/><circle cx="8.5" cy="15.5" r="1.45"/><circle cx="19" cy="12" r="1.45"/><circle cx="19" cy="5" r="1.45"/><circle cx="5" cy="5" r="1.45"/><circle cx="5" cy="12" r="1.45"/><circle cx="12" cy="19" r="1.45"/></g></svg>',
     accent: "var(--accent-nt)",
     accentBg: "rgba(108,143,255,0.1)"
   },
@@ -19,7 +19,7 @@ const TOPICS = {
     key: "trigonometry",
     label: "Trigonometry",
     tagline: "Identities, equations, angle relationships.",
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18c3-9 6-9 9 0s6 9 9 0"/></svg>',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 19A16 16 0 0 0 4 3" opacity="0.35" stroke-width="1.3"/><path d="M4 19h16.5M4 19V2.5" opacity="0.3" stroke-width="1.2"/><path d="M4 19 16.26 8.72V19Z" fill="currentColor" fill-opacity="0.18"/><path d="M14 19v-2.3h2.26" stroke-width="1.2" opacity="0.7"/><path d="M8.6 19a4.6 4.6 0 0 0-1.07-2.95" stroke-width="1.3"/><circle cx="16.26" cy="8.72" r="1.75" fill="currentColor" stroke="none"/></svg>',
     accent: "var(--accent-trig)",
     accentBg: "rgba(255,138,92,0.1)"
   },
@@ -27,7 +27,7 @@ const TOPICS = {
     key: "calculus",
     label: "Calculus",
     tagline: "Limits, derivatives, integrals.",
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 4.5c-1.5 0-2.5 1-2.8 2.5l-2.4 12c-.3 1.5-1.3 2.5-2.8 2.5"/><path d="M8 4.5h1.5M16.5 19.5H18"/></svg>',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><defs><clipPath id="ps-calc-area"><path d="M4 18C9 18 10.5 6.5 15 6.5c2.4 0 3.8 1 5.5 2.5V20.5H4Z"/></clipPath></defs><g clip-path="url(#ps-calc-area)"><rect x="8" y="2" width="8.5" height="18.5" fill="currentColor" fill-opacity="0.22" stroke="none"/><path d="M8 2v18.5M16.5 2v18.5" opacity="0.6" stroke-width="1.2"/></g><path d="M3.5 3.5v17h17" opacity="0.4" stroke-width="1.3"/><path d="M4 18C9 18 10.5 6.5 15 6.5c2.4 0 3.8 1 5.5 2.5"/></svg>',
     accent: "var(--accent-calc)",
     accentBg: "rgba(126,224,140,0.1)"
   },
@@ -35,7 +35,7 @@ const TOPICS = {
     key: "combinatorics",
     label: "Combinatorics",
     tagline: "Counting, permutations, graph problems.",
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 7l8 0M6 8.5v7M18 8.5v7M8 17l8 0"/></svg>',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5 3 19.5M12 4.5 21 19.5M9 9.5 15 19.5M15 9.5 9 19.5M6 14.5h12M9 9.5h6" opacity="0.25" stroke-width="1.1"/><g fill="currentColor" stroke="none" opacity="0.4"><circle cx="15" cy="9.5" r="1.15"/><circle cx="6" cy="14.5" r="1.15"/><circle cx="18" cy="14.5" r="1.15"/><circle cx="3" cy="19.5" r="1.15"/><circle cx="9" cy="19.5" r="1.15"/><circle cx="21" cy="19.5" r="1.15"/></g><path d="M12 4.5 9 9.5l3 5 3 5" stroke-width="1.9"/><g fill="currentColor" stroke="none"><circle cx="12" cy="4.5" r="1.8"/><circle cx="9" cy="9.5" r="1.45"/><circle cx="12" cy="14.5" r="1.45"/><circle cx="15" cy="19.5" r="1.8"/></g></svg>',
     accent: "var(--accent-comb)",
     accentBg: "rgba(214,138,255,0.1)"
   },
@@ -43,7 +43,7 @@ const TOPICS = {
     key: "algebra",
     label: "Algebra",
     tagline: "Equations, inequalities, functions.",
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h5l-4 10h5M14 7h6M14 12h6M14 17h6"/></svg>',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5v12.5M8.5 19.5h7M4.5 7.5h15"/><circle cx="12" cy="5.2" r="1.5" fill="currentColor" stroke="none"/><path d="M5.5 7.5 3 13.5M5.5 7.5 8 13.5M18.5 7.5 16 13.5M18.5 7.5 21 13.5" opacity="0.4" stroke-width="1.1"/><path d="M2.5 13.5h6a3 3 0 0 1-6 0ZM15.5 13.5h6a3 3 0 0 1-6 0Z" fill="currentColor" fill-opacity="0.2"/><rect x="4.25" y="10.9" width="2.5" height="2.5" rx="0.5" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12.1" r="1.3" fill="currentColor" stroke="none"/></svg>',
     accent: "var(--accent-alg)",
     accentBg: "rgba(255,209,102,0.1)"
   }

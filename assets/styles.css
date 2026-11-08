@@ -269,8 +269,9 @@ h1 .accent { color: var(--accent-eyebrow, var(--accent-nt)); }
   border-color: var(--card-accent, var(--border-hover));
   box-shadow: 0 0 0 1px var(--card-accent, var(--border-hover)), 0 12px 32px -12px var(--card-accent, transparent);
 }
-.topic-card .topic-icon { margin-bottom: 18px; width: 36px; height: 36px; }
-.topic-card .topic-icon svg { width: 18px; height: 18px; }
+.topic-card .topic-icon { margin-bottom: 18px; width: 46px; height: 46px; border-radius: 11px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-accent) 16%, transparent); }
+.topic-card .topic-icon svg { width: 28px; height: 28px; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.topic-card:hover .topic-icon svg { transform: scale(1.08); }
 .topic-card h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 6px; }
 .topic-card p {
   font-size: 13px;
