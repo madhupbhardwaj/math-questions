@@ -1026,6 +1026,124 @@ function initMobileMenu() {
 }
 
 // ============================================================
+// GOOEY TOPIC MENU (top-right of every page)
+// A pill that shows the current topic; clicking it drops a panel of topics
+// out of the pill like a drop of liquid. The "goo" comes from an SVG filter
+// (blur + alpha threshold) applied to two plain shapes, the pill and the
+// panel, so they visually melt together while they are close. The text and
+// links sit on a separate, unfiltered layer above, so they stay crisp.
+// Built from the existing .nav-links, which remain the no-JS fallback.
+// ============================================================
+const GOO_ALL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6" fill="currentColor" fill-opacity="0.25"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6" fill="currentColor" fill-opacity="0.25"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg>';
+const GOO_ABOUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/></svg>';
+
+function initTopicMenu() {
+  const links = document.querySelector('.nav-links');
+  const controls = document.querySelector('.nav-controls');
+  const logo = document.querySelector('.logo');
+  if (!links || !controls) { initMobileMenu(); return; }
+
+  const isHome = !!document.getElementById('topicGrid');
+  const items = [{ label: 'All topics', href: logo ? logo.getAttribute('href') : '/', icon: GOO_ALL_ICON, accent: 'var(--goo-fg)', active: isHome }];
+  links.querySelectorAll('a').forEach(a => {
+    const label = a.textContent.trim();
+    const t = TOPICS[label];
+    items.push({
+      label, href: a.getAttribute('href'),
+      icon: t ? t.icon : GOO_ABOUT_ICON,
+      accent: t ? t.accent : 'var(--goo-fg-dim)',
+      active: a.classList.contains('active'),
+      sep: !t
+    });
+  });
+  const current = items.find(it => it.active && it.label !== 'All topics' && it.label !== 'About');
+  const trigIcon = current ? current.icon : GOO_ALL_ICON;
+  const trigAccent = current ? current.accent : 'var(--goo-fg)';
+  const trigLabel = current ? current.label : 'Topics';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'goo';
+  wrap.dataset.open = 'false';
+  wrap.innerHTML = `
+    <svg class="goo-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="ps-goo" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -12" result="goo"/>
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </svg>
+    <div class="goo-blobs" aria-hidden="true"><div class="goo-pill"></div><div class="goo-panel"></div></div>
+    <button class="goo-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="gooMenu">
+      <span class="goo-ic" style="--item-accent:${trigAccent}">${trigIcon}</span>
+      <span class="goo-label">${trigLabel}</span>
+      <svg class="goo-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <ul class="goo-list" id="gooMenu" role="menu" aria-label="Topics">
+      ${items.map((it, i) => `${it.sep ? '<li class="goo-sep" role="separator"></li>' : ''}<li role="none" style="--i:${i}"><a role="menuitem" tabindex="-1" href="${it.href}" class="goo-item${it.active ? ' active' : ''}" style="--item-accent:${it.accent}"${it.active ? ' aria-current="page"' : ''}><span class="goo-ic">${it.icon}</span><span class="goo-text">${it.label}</span>${it.active ? '<span class="goo-dot" aria-hidden="true"></span>' : ''}</a></li>`).join('')}
+    </ul>`;
+  controls.appendChild(wrap);
+  document.documentElement.classList.add('has-goo');
+
+  const trigger = wrap.querySelector('.goo-trigger');
+  const list = wrap.querySelector('.goo-list');
+  const menuItems = Array.from(wrap.querySelectorAll('.goo-item'));
+
+  // The two blobs must match the real sizes of the button and the list.
+  function layout() {
+    const tw = trigger.offsetWidth, th = trigger.offsetHeight;
+    const pw = list.offsetWidth, ph = list.offsetHeight;
+    wrap.style.setProperty('--tw', tw + 'px');
+    wrap.style.setProperty('--th', th + 'px');
+    wrap.style.setProperty('--pw', pw + 'px');
+    wrap.style.setProperty('--ph', ph + 'px');
+    // Closed: shrink the panel so it hides entirely inside the pill
+    // (same colour, so it's invisible), centred under the pill.
+    if (pw && ph) {
+      wrap.style.setProperty('--sx', Math.min(1, (tw * 0.6) / pw).toFixed(4));
+      wrap.style.setProperty('--sy', Math.min(1, (th * 0.6) / ph).toFixed(4));
+      wrap.style.setProperty('--ox', (pw - tw / 2) + 'px');
+    }
+  }
+  layout();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  window.addEventListener('resize', layout);
+
+  let open = false;
+  function setOpen(next, focusFirst) {
+    if (next === open) return;
+    open = next;
+    if (open) layout();
+    wrap.dataset.open = String(open);
+    trigger.setAttribute('aria-expanded', String(open));
+    menuItems.forEach(a => a.tabIndex = open ? 0 : -1);
+    if (open && focusFirst) {
+      const target = menuItems.find(a => a.classList.contains('active')) || menuItems[0];
+      setTimeout(() => target.focus({ preventScroll: true }), 120);
+    }
+  }
+
+  trigger.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!open, e.detail === 0); });
+  trigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true, true); }
+  });
+  list.addEventListener('keydown', (e) => {
+    const i = menuItems.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const n = menuItems.length;
+      const next = e.key === 'ArrowDown' ? (i + 1) % n : (i - 1 + n) % n;
+      menuItems[next].focus();
+    } else if (e.key === 'Home') { e.preventDefault(); menuItems[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); menuItems[menuItems.length - 1].focus(); }
+    else if (e.key === 'Tab') { setOpen(false); }
+  });
+  document.addEventListener('click', (e) => { if (open && !wrap.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && open) { setOpen(false); trigger.focus(); }
+  });
+}
+
+// ============================================================
 // LIGHT/DARK THEME TOGGLE
 // Call initThemeToggle() from every page's inline script.
 // Preference is saved in localStorage and applied instantly
