@@ -1,7 +1,7 @@
 // ============================================================
 // CONFIG — edit these to change data source or topics
 // ============================================================
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
+const SHEET_CSV_URL = window.PS_SHEET_CSV_URL || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
 const SHOW_IMAGES = false; // set to true to bring images back
 const SHOW_DONATION = true; // set to false to hide the "Support this project" card
 const SHOW_PROGRESS = true; // set to false to hide "Mark solved" buttons and the solved counter
@@ -112,10 +112,50 @@ function buildDataFromRows(rows) {
 
 const CACHE_KEY = "problemset_cache_v1";
 
-async function fetchCsvWithRetry(retries = 2, delayMs = 800) {
+// Minimal RFC 4180 CSV parser (quoted fields, "" escapes, newlines inside
+// quotes). Replaces PapaParse: one less download before questions can show.
+// Returns row objects keyed by the header row; fully empty lines are skipped.
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', i = 0, inQuotes = false;
+  const s = String(text || '').replace(/^﻿/, '');
+  while (i < s.length) {
+    const c = s[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (s[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQuotes = true; i++; continue; }
+    if (c === ',') { row.push(field); field = ''; i++; continue; }
+    if (c === '\r' || c === '\n') {
+      row.push(field); field = '';
+      rows.push(row); row = [];
+      if (c === '\r' && s[i + 1] === '\n') i++;
+      i++; continue;
+    }
+    field += c; i++;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  const nonEmpty = rows.filter(r => r.some(v => v !== ''));
+  if (!nonEmpty.length) return [];
+  const header = nonEmpty[0].map(h => h.trim());
+  return nonEmpty.slice(1).map(r => {
+    const o = {};
+    header.forEach((h, k) => { o[h] = r[k] !== undefined ? r[k] : ''; });
+    return o;
+  });
+}
+
+// Fetch the published sheet with a time limit, retrying briefly on failure.
+async function fetchCsvWithRetry(retries = 1, delayMs = 600, timeoutMs = 8000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
     try {
-      const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+      const res = await fetch(SHEET_CSV_URL, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       if (!text || text.trim().length === 0) throw new Error("Empty response");
@@ -123,43 +163,58 @@ async function fetchCsvWithRetry(retries = 2, delayMs = 800) {
     } catch (err) {
       if (attempt === retries) throw err;
       await new Promise(r => setTimeout(r, delayMs));
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 }
 
-// One fetch per page: the topic list and the global search share it.
-let _loadDataPromise = null;
-function loadData() {
-  if (!_loadDataPromise) {
-    _loadDataPromise = _loadDataOnce();
-    _loadDataPromise.catch(() => { _loadDataPromise = null; });
-  }
-  return _loadDataPromise;
-}
-
-async function _loadDataOnce() {
+function readCachedData() {
   try {
-    const csvText = await fetchCsvWithRetry();
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    const data = buildDataFromRows(parsed.data);
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
-    return data;
-  } catch (err) {
-    // Live fetch failed even after retries — fall back to last known-good data if we have it
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        console.warn("Live fetch failed, showing cached data:", err);
-        return JSON.parse(cached);
-      }
-    } catch (e) { /* storage blocked or cache corrupt — fall through to the original error */ }
-    throw err;
-  }
+    const cached = localStorage.getItem(CACHE_KEY);
+    return cached ? JSON.parse(cached) : null;
+  } catch (e) { return null; }
 }
 
+// One live fetch per page, shared by the topic list and the global search.
+// Uses the download started early in <head> (window.__psCsv) when present.
+let _freshDataPromise = null;
+function fetchFreshData() {
+  if (!_freshDataPromise) {
+    let textPromise = window.__psCsv;
+    window.__psCsv = null;
+    textPromise = textPromise ? textPromise.catch(() => fetchCsvWithRetry()) : fetchCsvWithRetry();
+    _freshDataPromise = textPromise.then(text => {
+      const data = buildDataFromRows(parseCsv(text));
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+      return data;
+    });
+    _freshDataPromise.catch(() => { _freshDataPromise = null; });
+  }
+  return _freshDataPromise;
+}
+
+// Stale-while-revalidate: resolves immediately with the questions saved from
+// the last visit (if any), while the live sheet downloads in the background.
+// If the live copy differs, onUpdate(freshData) is called so the page can
+// refresh in place. With no saved copy, it simply waits for the live sheet.
+function loadData(onUpdate) {
+  const fresh = fetchFreshData();
+  const cached = readCachedData();
+  if (cached) {
+    const snapshot = JSON.stringify(cached);
+    fresh.then(data => {
+      if (onUpdate && JSON.stringify(data) !== snapshot) onUpdate(data);
+    }).catch(err => console.warn("Live refresh failed, showing saved questions:", err));
+    return Promise.resolve(cached);
+  }
+  return fresh;
+}
+
+// Run once the page's deferred libraries (KaTeX) have executed.
 function waitForLibs(callback) {
-  if (window.Papa) callback();
-  else setTimeout(() => waitForLibs(callback), 50);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => callback(), { once: true });
+  else callback();
 }
 
 // ============================================================
@@ -698,12 +753,23 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
 }
 
 function renderMath(container) {
+  if (!window.renderMathInElement) {
+    // KaTeX loads with "defer"; try again once it has run.
+    if (document.querySelector('script[src*="katex"]') && !container.__mathRetry) {
+      container.__mathRetry = true;
+      const retry = () => { container.__mathRetry = false; if (window.renderMathInElement) renderMath(container); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', retry, { once: true });
+      else window.addEventListener('load', retry, { once: true });
+    }
+    return;
+  }
   if (window.renderMathInElement) {
     renderMathInElement(container, {
       delimiters: [
         { left: "$$", right: "$$", display: true },
         { left: "$", right: "$", display: false }
-      ]
+      ],
+      strict: "ignore"   // questions use \\ line breaks inside display math; don't spam the console
     });
   }
 }
@@ -832,12 +898,29 @@ function initTopicPage(topicKey) {
 
   renderSkeleton(main, 5);
 
+  function applyData(data) {
+    const section = data[topicKey];
+    allQuestions = section ? section.questions : [];
+    accent = section ? section.accent : accent;
+    topicLabel = section ? section.label : '';
+  }
+
+  // The sheet changed since the saved copy: refresh in place, keeping open questions.
+  function refreshWith(data) {
+    const open = Array.from(main.querySelectorAll('.q-item.open')).map(el => el.dataset.qid);
+    applyData(data);
+    renderStats();
+    renderPillCounts();
+    render();
+    open.forEach(id => {
+      const el = main.querySelector(`.q-item[data-qid="${id}"]`);
+      if (el) setQuestionOpen(el, true);
+    });
+  }
+
   waitForLibs(() => {
-    loadData().then(data => {
-      const section = data[topicKey];
-      allQuestions = section ? section.questions : [];
-      accent = section ? section.accent : accent;
-      topicLabel = section ? section.label : '';
+    loadData(refreshWith).then(data => {
+      applyData(data);
 
       renderStats();
       renderPillCounts();
@@ -901,7 +984,13 @@ function initLandingPage() {
     </div>`).join('');
 
   waitForLibs(() => {
-    loadData().then(data => {
+    loadData(renderGrid).then(renderGrid).catch(err => {
+      console.error("Failed to load questions:", err);
+      grid.innerHTML = '<div class="empty-state">Could not load topics right now. Check back shortly.</div>';
+    });
+  });
+
+  function renderGrid(data) {
       const total = Object.values(data).reduce((sum, s) => sum + s.questions.length, 0);
       const heroCount = document.getElementById('heroCount');
       if (heroCount) heroCount.textContent = total;
@@ -936,11 +1025,7 @@ function initLandingPage() {
           </div>
         </a>`;
       }).join('');
-    }).catch(err => {
-      console.error("Failed to load questions:", err);
-      grid.innerHTML = '<div class="empty-state">Could not load topics right now. Check back shortly.</div>';
-    });
-  });
+  }
 }
 
 // A thin easy/medium/hard bar used on topic cards and the topic header.
@@ -1439,7 +1524,7 @@ function initSpotlightSearch() {
     render();
     setTimeout(() => input.focus({ preventScroll: true }), 10);
     if (!index) {
-      waitForLibs(() => loadData().then(data => {
+      waitForLibs(() => loadData(fresh => { index = buildIndex(fresh); if (!overlay.hidden) render(); }).then(data => {
         index = buildIndex(data);
         if (!overlay.hidden) render();
       }).catch(() => { index = []; if (!overlay.hidden) render(); }));

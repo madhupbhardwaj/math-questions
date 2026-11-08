@@ -10,6 +10,20 @@
     } catch (e) {}
   })();
 </script>
+<script>
+  // Start downloading the questions immediately, in parallel with everything
+  // else (app.js picks this up). The sheet URL lives here and in app.js.
+  window.PS_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
+  try {
+    window.__psCsv = fetch(window.PS_SHEET_CSV_URL, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    });
+    window.__psCsv.catch(function () {});
+  } catch (e) {}
+</script>
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
+<link rel="dns-prefetch" href="https://doc-0g-9c-sheets.googleusercontent.com">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculus — Problem Set</title>
@@ -27,6 +41,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Dancing+Script:wght@600&display=swap" rel="stylesheet" crossorigin="anonymous">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -38,7 +53,7 @@
 <meta name="apple-mobile-web-app-title" content="problemset">
 <meta name="application-name" content="problemset">
 <meta name="theme-color" content="#0a0a0b">
-<link rel="stylesheet" href="../assets/styles.css?v=20261109a">
+<link rel="stylesheet" href="../assets/styles.css?v=20261109b">
 </head>
 <body data-accent="calc">
 <a class="skip-link" href="#content">Skip to content</a>
@@ -177,7 +192,7 @@
     </div>
 
     <div class="support-qr-wrap">
-      <img src="../assets/donation/upi-qr.png" alt="UPI QR code">
+      <img src="../assets/donation/upi-qr.png" alt="UPI QR code" loading="lazy" decoding="async" width="200" height="200">
     </div>
     <p class="support-qr-note">Scan with any UPI app — Google Pay, PhonePe, Paytm, or FamPay.</p>
 
@@ -188,8 +203,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="../assets/app.js?v=20261109a"></script>
+<script src="../assets/app.js?v=20261109b"></script>
 <script>
   initTopicPage("calculus");
   initCursorGlow();
