@@ -127,7 +127,17 @@ async function fetchCsvWithRetry(retries = 2, delayMs = 800) {
   }
 }
 
-async function loadData() {
+// One fetch per page: the topic list and the global search share it.
+let _loadDataPromise = null;
+function loadData() {
+  if (!_loadDataPromise) {
+    _loadDataPromise = _loadDataOnce();
+    _loadDataPromise.catch(() => { _loadDataPromise = null; });
+  }
+  return _loadDataPromise;
+}
+
+async function _loadDataOnce() {
   try {
     const csvText = await fetchCsvWithRetry();
     const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
@@ -599,7 +609,7 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
             Share
           </button>
           ${SHOW_PROGRESS ? `<button class="solved-btn" aria-pressed="false" title="Mark this question as solved">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="dcb" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 16 16"><rect class="dcb-box" x="1.25" y="1.25" width="13.5" height="13.5" rx="4"/><path class="dcb-check" d="M4.7 8.3 7.1 10.7l4.3-5.1" pathLength="1"/></svg></span>
             <span class="solved-label">Mark solved</span>
           </button>` : ''}
         </div>
@@ -637,6 +647,17 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
       e.stopPropagation();
       const next = !qEl.classList.contains('solved');
       paint(next);
+      // Tactile snap on the checkbox (restart the animation every click)
+      const box = solvedBtn.querySelector('.dcb');
+      if (box) { box.classList.remove('dcb-pop'); void box.offsetWidth; box.classList.add('dcb-pop'); }
+      if (next) {
+        const r = (box || solvedBtn).getBoundingClientRect();
+        const cs = getComputedStyle(qEl);
+        particleBurst(r.left + r.width / 2, r.top + r.height / 2, [
+          cs.getPropertyValue('--glow').trim(),
+          getComputedStyle(document.documentElement).getPropertyValue('--solved').trim()
+        ]);
+      }
       setSolved(topicKey, item.id, next);
       if (onProgressChange) onProgressChange();
     });
@@ -1144,6 +1165,321 @@ function initTopicMenu() {
 }
 
 // ============================================================
+// GRAVITY PARTICLE BURST
+// A short physical burst (velocity, gravity, friction, fade) drawn on one
+// shared full-screen canvas. Used when a question is marked solved.
+// ============================================================
+let _burstCanvas = null, _burstCtx = null, _burstParticles = [], _burstRaf = null;
+function particleBurst(x, y, colors) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const palette = (colors || []).filter(Boolean);
+  if (!palette.length) palette.push('#6c8fff');
+  if (!_burstCanvas) {
+    _burstCanvas = document.createElement('canvas');
+    _burstCanvas.className = 'burst-canvas';
+    _burstCanvas.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(_burstCanvas);
+    _burstCtx = _burstCanvas.getContext('2d');
+  }
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (_burstCanvas.width !== Math.round(innerWidth * dpr) || _burstCanvas.height !== Math.round(innerHeight * dpr)) {
+    _burstCanvas.width = Math.round(innerWidth * dpr);
+    _burstCanvas.height = Math.round(innerHeight * dpr);
+  }
+  const now = performance.now();
+  for (let i = 0; i < 34; i++) {
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.35;
+    const speed = 2.6 + Math.random() * 5.2;
+    _burstParticles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.2,
+      size: 1.6 + Math.random() * 2.8,
+      color: palette[i % palette.length],
+      square: Math.random() < 0.35,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3,
+      born: now, life: 650 + Math.random() * 450
+    });
+  }
+  if (!_burstRaf) _burstRaf = requestAnimationFrame(_burstTick);
+}
+function _burstTick(t) {
+  const ctx = _burstCtx, dpr = _burstCanvas.width / innerWidth;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, _burstCanvas.width, _burstCanvas.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  _burstParticles = _burstParticles.filter(p => t - p.born < p.life);
+  for (const p of _burstParticles) {
+    p.vy += 0.22;           // gravity
+    p.vx *= 0.985; p.vy *= 0.985;  // friction
+    p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+    const k = 1 - (t - p.born) / p.life;
+    ctx.globalAlpha = Math.max(0, Math.min(1, k * 1.4));
+    ctx.fillStyle = p.color;
+    if (p.square) {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
+      ctx.restore();
+    } else {
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  if (_burstParticles.length) _burstRaf = requestAnimationFrame(_burstTick);
+  else { _burstRaf = null; ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, _burstCanvas.width, _burstCanvas.height); }
+}
+
+// ============================================================
+// SPOTLIGHT SEARCH (⌘K / Ctrl+K, "/" or the Search button)
+// Searches every question across all topics and jumps straight to it.
+// ============================================================
+const _LATEX_WORDS = {
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', theta: 'θ', phi: 'φ', chi: 'χ', pi: 'π', omega: 'ω', lambda: 'λ', mu: 'μ', sigma: 'σ',
+  leq: '≤', geq: '≥', le: '≤', ge: '≥', neq: '≠', ne: '≠', lt: '<', gt: '>', in: '∈', notin: '∉', infty: '∞', cdot: '·', times: '×', circ: '∘', pm: '±',
+  sum: 'Σ', prod: 'Π', int: '∫', sqrt: '√', dots: '…', ldots: '…', cdots: '⋯',
+  sin: 'sin', cos: 'cos', tan: 'tan', log: 'log', ln: 'ln', lim: 'lim', mathbb: ''
+};
+// Turn a question's LaTeX source into readable plain text for searching/snippets.
+function latexToPlain(src) {
+  let s = String(src || '');
+  for (let i = 0; i < 3; i++) s = s.replace(/\\(?:text|textrm|mathrm|mbox|textbf|textit|operatorname)\s*\{([^{}]*)\}/g, ' $1 ');
+  for (let i = 0; i < 3; i++) s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, ' ($1)/($2) ');
+  // Superscripts / subscripts → real Unicode where possible (10^6 → 10⁶, S_{999} → S₉₉₉)
+  const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', 'n': 'ⁿ', 'i': 'ⁱ' };
+  const SUB = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', '+': '₊', '-': '₋', 'i': 'ᵢ', 'n': 'ₙ', 'k': 'ₖ', 'r': 'ᵣ', 'x': 'ₓ' };
+  const script = (map, body, mark) => {
+    const t = body.replace(/\s+/g, '');
+    return [...t].every(c => c in map) ? [...t].map(c => map[c]).join('') : mark + (t.length > 1 ? '(' + t + ')' : t);
+  };
+  s = s.replace(/\^\s*\{?\\circ\}?/g, '°')
+       .replace(/\^\s*\{([^{}]*)\}/g, (m, b) => script(SUP, b, '^'))
+       .replace(/\^\s*([0-9A-Za-z+-])/g, (m, b) => script(SUP, b, '^'))
+       .replace(/_\s*\{([^{}]*)\}/g, (m, b) => script(SUB, b, '_'))
+       .replace(/_\s*([0-9A-Za-z])/g, (m, b) => script(SUB, b, '_'));
+  s = s
+       .replace(/\\([a-zA-Z]+)/g, (m, w) => (w in _LATEX_WORDS ? ' ' + _LATEX_WORDS[w] + ' ' : ' '))
+       .replace(/\\./g, ' ')
+       .replace(/\$+/g, ' ')
+       .replace(/[{}&]/g, ' ')
+       .replace(/[\^_]/g, '')
+       .replace(/\(\s*([^()\s]+)\s*\)\/\(\s*([^()\s]+)\s*\)/g, '$1/$2')
+       .replace(/\s+([,.;:?)])/g, '$1').replace(/\(\s+/g, '(')
+       .replace(/\s+([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿⁱ₀₁₂₃₄₅₆₇₈₉₊₋ᵢₙₖᵣₓ])/g, '$1')
+       .replace(/\s+/g, ' ').trim();
+  return s;
+}
+
+function initSpotlightSearch() {
+  const trigger = document.getElementById('searchTrigger');
+  const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+  if (trigger) {
+    const kbd = trigger.querySelector('.st-kbd');
+    if (kbd) kbd.textContent = isMac ? '⌘K' : 'Ctrl K';
+  }
+  const logo = document.querySelector('.logo');
+  const base = logo ? logo.getAttribute('href') : '/';  // "./" on the home page, "../" elsewhere
+
+  let overlay, panel, input, list, hl, countEl, index = null, results = [], active = 0, lastFocus = null;
+
+  function build() {
+    overlay = document.createElement('div');
+    overlay.className = 'spot-overlay';
+    overlay.hidden = true;
+    overlay.innerHTML = `
+      <div class="spot" role="dialog" aria-modal="true" aria-label="Search all questions">
+        <div class="spot-head">
+          <svg class="spot-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+          <input class="spot-input" type="text" placeholder="Search every question…" autocomplete="off" autocorrect="off" spellcheck="false"
+                 role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="spotList" aria-label="Search questions">
+          <kbd class="spot-esc">Esc</kbd>
+        </div>
+        <div class="spot-body">
+          <div class="spot-hl" aria-hidden="true"></div>
+          <ul class="spot-list" id="spotList" role="listbox" aria-label="Results"></ul>
+        </div>
+        <div class="spot-foot">
+          <span><kbd>↑</kbd><kbd>↓</kbd> to move</span><span><kbd>↵</kbd> to open</span><span class="spot-count"></span>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    panel = overlay.querySelector('.spot');
+    input = overlay.querySelector('.spot-input');
+    list = overlay.querySelector('.spot-list');
+    hl = overlay.querySelector('.spot-hl');
+    countEl = overlay.querySelector('.spot-count');
+
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close(); });
+    overlay.querySelector('.spot-esc').addEventListener('click', close);
+    input.addEventListener('input', () => { active = 0; render(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+      else if (e.key === 'Enter') { e.preventDefault(); go(results[active]); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'Tab') { e.preventDefault(); move(e.shiftKey ? -1 : 1); }
+    });
+    list.addEventListener('mousemove', (e) => {
+      const li = e.target.closest('.spot-item');
+      if (li && +li.dataset.i !== active) { active = +li.dataset.i; paintActive(); }
+    });
+    list.addEventListener('click', (e) => {
+      const li = e.target.closest('.spot-item');
+      if (li) go(results[+li.dataset.i]);
+    });
+  }
+
+  function buildIndex(data) {
+    const items = [];
+    Object.values(TOPICS).forEach(t => {
+      const section = data[t.key];
+      (section ? section.questions : []).forEach(q => {
+        const plain = latexToPlain(q.q);
+        items.push({ type: 'q', topic: t, id: q.id, plain, difficulty: q.difficulty,
+                     hay: (plain + ' ' + t.label + ' ' + q.difficulty).toLowerCase() });
+      });
+    });
+    return items;
+  }
+
+  function topicResults(tokens) {
+    return Object.values(TOPICS)
+      .filter(t => !tokens.length || tokens.every(tok => t.label.toLowerCase().includes(tok)))
+      .map(t => ({ type: 't', topic: t }));
+  }
+
+  function search(q) {
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!tokens.length) return topicResults([]);
+    const topics = topicResults(tokens);
+    const qs = (index || [])
+      .map(it => {
+        let score = 0;
+        for (const tok of tokens) {
+          const at = it.hay.indexOf(tok);
+          if (at < 0) return null;
+          score += at + (it.hay.indexOf(' ' + tok) >= 0 || it.hay.startsWith(tok) ? 0 : 40);
+        }
+        return { it, score };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 40)
+      .map(x => x.it);
+    return topics.concat(qs);
+  }
+
+  function snippet(plain, tokens) {
+    const lower = plain.toLowerCase();
+    let at = -1;
+    for (const tok of tokens) { const i = lower.indexOf(tok); if (i >= 0 && (at < 0 || i < at)) at = i; }
+    let start = Math.max(0, (at < 0 ? 0 : at) - 32);
+    let text = plain.slice(start, start + 120);
+    if (start > 0) text = '…' + text.replace(/^\S*\s/, '');
+    if (start + 120 < plain.length) text = text.replace(/\s\S*$/, '') + '…';
+    if (!tokens.length) return _escHtml(text);
+    const re = new RegExp('(' + tokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+    return text.split(re).map((part, i) => i % 2 ? `<mark>${_escHtml(part)}</mark>` : _escHtml(part)).join('');
+  }
+
+  function render() {
+    const q = input.value.trim();
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    results = search(q);
+    let html = '', lastType = null;
+    results.forEach((r, i) => {
+      if (r.type !== lastType) {
+        html += `<li class="spot-group" role="presentation">${r.type === 't' ? (q ? 'Topics' : 'Jump to a topic') : 'Questions'}</li>`;
+        lastType = r.type;
+      }
+      const t = r.topic;
+      if (r.type === 't') {
+        html += `<li class="spot-item spot-topic" role="option" id="spot-${i}" data-i="${i}" style="--item-accent:${t.accent}">
+          <span class="spot-ic">${t.icon}</span><span class="spot-main"><span class="spot-title">${t.label}</span><span class="spot-sub">${t.tagline}</span></span>
+          <span class="spot-go" aria-hidden="true">↵</span></li>`;
+      } else {
+        html += `<li class="spot-item" role="option" id="spot-${i}" data-i="${i}" style="--item-accent:${t.accent}">
+          <span class="spot-ic">${t.icon}</span>
+          <span class="spot-main"><span class="spot-snip">${snippet(r.plain, tokens)}</span>
+          <span class="spot-meta">${t.label} · ${difficultyIndicator(r.difficulty)}</span></span>
+          <span class="spot-go" aria-hidden="true">↵</span></li>`;
+      }
+    });
+    if (!results.length) {
+      html = `<li class="spot-empty" role="presentation">${index ? 'No questions match “' + _escHtml(q) + '”.' : 'Loading questions…'}</li>`;
+    }
+    list.innerHTML = html;
+    const nq = results.filter(r => r.type === 'q').length;
+    countEl.textContent = q ? `${nq} question${nq === 1 ? '' : 's'}` : (index ? `${index.length} questions in total` : '');
+    active = Math.min(active, Math.max(0, results.length - 1));
+    paintActive(true);
+  }
+
+  function paintActive(instant) {
+    const items = list.querySelectorAll('.spot-item');
+    items.forEach(el => el.classList.toggle('is-active', +el.dataset.i === active));
+    const el = items[active];
+    if (!el) { hl.style.opacity = '0'; input.removeAttribute('aria-activedescendant'); return; }
+    input.setAttribute('aria-activedescendant', el.id);
+    if (instant) hl.classList.add('no-anim');
+    hl.style.opacity = '1';
+    hl.style.transform = `translateY(${el.offsetTop}px)`;
+    hl.style.height = el.offsetHeight + 'px';
+    if (instant) requestAnimationFrame(() => hl.classList.remove('no-anim'));
+    const body = list.parentElement;
+    if (el.offsetTop < body.scrollTop) body.scrollTop = el.offsetTop - 6;
+    else if (el.offsetTop + el.offsetHeight > body.scrollTop + body.clientHeight) body.scrollTop = el.offsetTop + el.offsetHeight - body.clientHeight + 6;
+  }
+
+  function move(d) {
+    if (!results.length) return;
+    active = (active + d + results.length) % results.length;
+    paintActive();
+  }
+
+  function go(r) {
+    if (!r) return;
+    const url = r.type === 't' ? `${base}${r.topic.key}/` : `${base}${r.topic.key}/?q=${r.id}`;
+    close();
+    window.location.href = url;
+  }
+
+  function open() {
+    if (!overlay) build();
+    if (!overlay.hidden) return;
+    lastFocus = document.activeElement;
+    overlay.hidden = false;
+    document.documentElement.classList.add('spot-open');
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    input.value = '';
+    active = 0;
+    render();
+    setTimeout(() => input.focus({ preventScroll: true }), 10);
+    if (!index) {
+      waitForLibs(() => loadData().then(data => {
+        index = buildIndex(data);
+        if (!overlay.hidden) render();
+      }).catch(() => { index = []; if (!overlay.hidden) render(); }));
+    }
+  }
+
+  function close() {
+    if (!overlay || overlay.hidden) return;
+    overlay.classList.remove('is-open');
+    document.documentElement.classList.remove('spot-open');
+    setTimeout(() => { overlay.hidden = true; }, 180);
+    if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+  }
+
+  if (trigger) trigger.addEventListener('click', open);
+  document.addEventListener('keydown', (e) => {
+    const k = e.key.toLowerCase();
+    if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); (overlay && !overlay.hidden) ? close() : open(); return; }
+    const typing = /^(input|textarea|select)$/i.test((e.target.tagName || '')) || e.target.isContentEditable;
+    if (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); open(); }
+  });
+}
+
+// ============================================================
 // LIGHT/DARK THEME TOGGLE
 // Call initThemeToggle() from every page's inline script.
 // Preference is saved in localStorage and applied instantly
@@ -1166,7 +1502,20 @@ function initThemeToggle() {
   }
   syncThemeColor();
 
+  // Liquid switch: role="switch", "on" = dark mode. Enable the slide
+  // transition only after first paint so it doesn't animate on page load.
+  const syncSwitch = () => {
+    const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+    btn.setAttribute('aria-checked', String(dark));
+  };
+  syncSwitch();
+  requestAnimationFrame(() => requestAnimationFrame(() => btn.classList.add('lt-ready')));
+  let moveTimer;
+
   btn.addEventListener('click', () => {
+    btn.classList.remove('lt-moving'); void btn.offsetWidth; btn.classList.add('lt-moving');
+    clearTimeout(moveTimer);
+    moveTimer = setTimeout(() => btn.classList.remove('lt-moving'), 650);
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     try {
       if (isLight) {
@@ -1178,6 +1527,7 @@ function initThemeToggle() {
       }
     } catch (e) {}
     syncThemeColor();
+    syncSwitch();
   });
 }
 
