@@ -64,7 +64,14 @@ function normalizeDifficulty(raw) {
   return "medium";
 }
 
+// Only plain web links are allowed from the sheet (no javascript:, data:, …).
+function safeUrl(url) {
+  const u = String(url || '').trim();
+  return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : '';
+}
+
 function normalizeImageUrl(url) {
+  url = safeUrl(url);
   if (!url) return null;
   const match = url.match(/[-\w]{25,}/);
   if (url.includes("drive.google.com") && match) {
@@ -126,7 +133,7 @@ function buildDataFromRows(rows) {
       a: autoWrapLatex((row["Answer"] || "").trim()) || "No solution provided yet.",
       difficulty: normalizeDifficulty(row["Difficulty"]),
       img: normalizeImageUrl((row["Image"] || "").trim()),
-      solutionLink: (row["Solution Link"] || "").trim()
+      solutionLink: safeUrl(row["Solution Link"])
     });
   });
 
@@ -311,6 +318,9 @@ function ensureHtml2Canvas() {
   _html2canvasPromise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    // Integrity check: the browser refuses the file if the CDN copy was ever altered.
+    s.integrity = 'sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H';
+    s.crossOrigin = 'anonymous';
     s.onload = () => resolve(window.html2canvas);
     s.onerror = () => { _html2canvasPromise = null; reject(new Error('Could not load html2canvas')); };
     document.head.appendChild(s);
@@ -541,6 +551,19 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
   btn.classList.add('busy');
   btn.innerHTML = '<span class="img-btn-spin">◌</span>';
 
+  // Safari only allows clipboard writes that start during the tap itself, but
+  // the image takes a moment to draw. So start the write now with a *promise*
+  // of the image (supported by Safari and Chrome) and fulfil it once drawn.
+  let resolveBlob, rejectBlob, clipboardWrite = null;
+  const blobPromise = new Promise((res, rej) => { resolveBlob = res; rejectBlob = rej; });
+  blobPromise.catch(() => {});
+  if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+    try {
+      clipboardWrite = navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })]);
+      clipboardWrite.catch(() => {});
+    } catch (e) { clipboardWrite = null; }
+  }
+
   let card;
   try {
     await ensureHtml2Canvas();
@@ -555,7 +578,7 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
           <span class="share-card-mark">∑</span>
           <span class="share-card-word">problemset</span>
         </div>
-        <span class="share-card-topic">${(topicLabel || '').toUpperCase()}</span>
+        <span class="share-card-topic">${_escHtml((topicLabel || '').toUpperCase())}</span>
       </div>
       <div class="share-card-q"></div>
       <div class="share-card-bottom">
@@ -585,50 +608,29 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
     liftTallDelimiters(card);
 
     const bg = getComputedStyle(document.body).backgroundColor || '#0a0a0b';
-    const baseOpts = {
+    // Keep the bitmap under ~16 million pixels: iPhones refuse bigger canvases.
+    const area = Math.max(1, card.offsetWidth * card.offsetHeight);
+    const scale = Math.max(1, Math.min(3, Math.max(2, window.devicePixelRatio || 2), Math.sqrt(16e6 / area)));
+    // html2canvas's own renderer. (Its foreignObject mode always came out blank
+    // on this site because of the external font/KaTeX stylesheets, so drawing
+    // with it first only doubled the time; the fixes in buildShareQuestionHTML,
+    // fitShareMath and liftTallDelimiters target this renderer.)
+    const canvas = await html2canvas(card, {
       backgroundColor: bg,
-      scale: Math.min(3, Math.max(2, window.devicePixelRatio || 2)),
+      scale,
       logging: false,
       useCORS: true,
       // Tall (long) questions: make sure the capture viewport fits the whole card
       windowWidth: Math.max(window.innerWidth, card.offsetWidth + 40),
       windowHeight: Math.max(window.innerHeight, card.offsetHeight + 40)
-    };
-
-    // foreignObjectRendering delegates painting to the browser's own SVG
-    // renderer, which fixes KaTeX's SVG-based radicals/delimiters rendering
-    // as garbled shapes. BUT it has a well-known failure mode: with external
-    // stylesheets (our Google Fonts / KaTeX CDN <link> tags) it often does
-    // NOT throw — it just silently produces a fully blank canvas. So we must
-    // actually inspect the pixels rather than trust "no exception" as success.
-    let canvas;
-    let usedForeignObject = false;
-    try {
-      canvas = await html2canvas(card, { ...baseOpts, foreignObjectRendering: true });
-      usedForeignObject = true;
-    } catch (e) {
-      console.warn('foreignObjectRendering threw, falling back:', e);
-    }
-
-    if (usedForeignObject && isCanvasBlank(canvas)) {
-      console.warn('foreignObjectRendering produced a blank capture, falling back.');
-      canvas = null;
-    }
-
-    if (!canvas) {
-      canvas = await html2canvas(card, baseOpts);
-    }
+    });
+    if (isCanvasBlank(canvas)) throw new Error('blank capture');
 
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     if (!blob) throw new Error('toBlob returned null');
 
-    let copied = false;
-    if (navigator.clipboard && window.ClipboardItem) {
-      try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        copied = true;
-      } catch (e) { copied = false; }
-    }
+    resolveBlob(blob);
+    const copied = clipboardWrite ? await clipboardWrite.then(() => true, () => false) : false;
 
     if (copied) {
       problemsetToast('✓ Image copied to clipboard');
@@ -645,6 +647,7 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
       problemsetToast('✓ Image saved');
     }
   } catch (err) {
+    rejectBlob(err);
     console.warn('Copy-as-image failed:', err);
     problemsetToast('Could not create image');
   } finally {
@@ -719,11 +722,11 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
     <div class="q-row">
       <span class="q-index">${String(index + 1).padStart(2, '0')}</span>
       <div class="q-body">
-        <div class="q-text">${item.q}</div>
-        ${(SHOW_IMAGES && item.img) ? `<img class="q-image${item.solutionLink ? ' q-image-linked' : ''}" src="${item.img}" alt="question diagram">` : ''}
+        <div class="q-text">${_escHtml(item.q)}</div>
+        ${(SHOW_IMAGES && item.img) ? `<img class="q-image${item.solutionLink ? ' q-image-linked' : ''}" src="${_escHtml(safeUrl(item.img))}" alt="question diagram">` : ''}
         <div class="q-meta">
           ${difficultyIndicator(item.difficulty)}
-          ${item.solutionLink ? `<a class="solution-btn" href="${item.solutionLink}" target="_blank" rel="noopener" aria-label="Watch the video solution on YouTube">
+          ${safeUrl(item.solutionLink) ? `<a class="solution-btn" href="${_escHtml(safeUrl(item.solutionLink))}" target="_blank" rel="noopener" aria-label="Watch the video solution on YouTube">
             <svg class="yt-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4.5" fill="#FF0000"/><path d="M10 9v6l5-3-5-3z" fill="#fff"/></svg>
             Video
           </a>` : ''}
@@ -740,7 +743,7 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
             <span class="solved-label">Mark solved</span>
           </button>` : ''}
         </div>
-        <div class="q-answer"><div class="q-answer-inner"><span class="label">SOLUTION</span>${item.a}</div></div>
+        <div class="q-answer"><div class="q-answer-inner"><span class="label">SOLUTION</span>${_escHtml(item.a)}</div></div>
       </div>
       <button class="chevron-btn" type="button" aria-expanded="false" aria-label="Show solution">
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
@@ -756,7 +759,7 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
     if (item.solutionLink) {
       diagram.addEventListener('click', (e) => {
         e.stopPropagation();
-        window.open(item.solutionLink, '_blank', 'noopener');
+        if (safeUrl(item.solutionLink)) window.open(safeUrl(item.solutionLink), '_blank', 'noopener');
       });
     }
   }

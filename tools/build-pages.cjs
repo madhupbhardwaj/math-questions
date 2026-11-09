@@ -119,6 +119,7 @@ function topicMotif(L, key) {
 // ---------- page templates ----------
 function questionPage(L, q) {
   const url = `${SITE}/q/${q.id}/`;
+  const image = fs.existsSync(path.join(ROOT, `assets/og/${q.id}.png`)) ? `${SITE}/assets/og/${q.id}.png` : `${SITE}/assets/og-image.png`;
   const shortText = q.plain.length > 70 ? q.plain.slice(0, 68).replace(/\s+\S*$/, '') + '…' : q.plain;
   const title = `${q.topicLabel} question: ${shortText} — problemset`;
   const description = (q.plain.length > 155 ? q.plain.slice(0, 152).replace(/\s+\S*$/, '') + '…' : q.plain);
@@ -127,7 +128,7 @@ function questionPage(L, q) {
     url, hasPart: [{ '@type': 'Question', text: q.plain, eduQuestionType: 'Problem' }], isPartOf: { '@type': 'WebSite', name: 'problemset', url: SITE } };
   return `<!DOCTYPE html>
 <html lang="en">
-${pageHead(L, { title, description, url, image: `${SITE}/assets/og/${q.id}.png`, katex: true })}<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
+${pageHead(L, { title, description, url, image, katex: true })}<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>
 <body data-accent="${q.accentKey}" data-qid="${q.id}">
 ${bgLayer(topicMotif(L, q.topic))}${header}
 <main id="content" class="page page-topic page-question container">
@@ -237,7 +238,8 @@ function sitemap(questions) {
         localStorage.setItem('problemset_theme', 'dark');
         window.__blob = null;
         window.ClipboardItem = class { constructor(o) { this.o = o; } };
-        Object.defineProperty(navigator, 'clipboard', { value: { write: async items => { window.__blob = items[0].o['image/png']; }, writeText: async () => {} } });
+        // The site hands the clipboard a promise of the image (for Safari); wait for it.
+        Object.defineProperty(navigator, 'clipboard', { value: { write: async items => { window.__blob = await items[0].o['image/png']; }, writeText: async () => {} } });
       });
       const ip = await ictx.newPage();
       for (const topic of [...new Set(todo.map(q => q.topic))]) {
@@ -268,7 +270,12 @@ function sitemap(questions) {
             x.drawImage(card, (1200 - w) / 2, (630 - h) / 2, w, h);
             return c.toDataURL('image/png');
           }, q.id);
-          if (!png) throw new Error(`Could not render the image for ${q.id}`);
+          if (!png) {
+            // Don't let one question stop the whole build: keep any older picture,
+            // otherwise its page uses the site's default preview picture.
+            console.warn(`::warning::Could not render the preview picture for ${q.id}; using ${fs.existsSync(path.join(ROOT, `assets/og/${q.id}.png`)) ? 'the previous picture' : 'the default picture'}.`);
+            continue;
+          }
           write(`assets/og/${q.id}.png`, Buffer.from(png.split(',')[1], 'base64'));
           manifest[q.id] = sig(q);
           console.log(`  image: ${q.id}`);
