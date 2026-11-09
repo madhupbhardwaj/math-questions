@@ -1715,22 +1715,42 @@ function initThemeToggle() {
   requestAnimationFrame(() => requestAnimationFrame(() => btn.classList.add('lt-ready')));
   let moveTimer;
 
+  function applyTheme(next) {
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('problemset_theme', next); } catch (e) {}
+    syncThemeColor();
+    syncSwitch();
+  }
+
   btn.addEventListener('click', () => {
     btn.classList.remove('lt-moving'); void btn.offsetWidth; btn.classList.add('lt-moving');
     clearTimeout(moveTimer);
     moveTimer = setTimeout(() => btn.classList.remove('lt-moving'), 650);
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    try {
-      if (isLight) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('problemset_theme', 'dark');
-      } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-        localStorage.setItem('problemset_theme', 'light');
-      }
-    } catch (e) {}
-    syncThemeColor();
-    syncSwitch();
+    const root = document.documentElement;
+    const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+
+    // Theme wave: the new theme spreads out from the toggle as a circle
+    // with a soft, feathered edge and sweeps diagonally across the page.
+    // Uses the View Transitions API; browsers without it (or users who
+    // prefer reduced motion) just switch instantly.
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce || root.classList.contains('theme-vt')) {
+      applyTheme(next);
+      return;
+    }
+    const r = btn.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    const feather = Math.max(120, reach * 0.28);
+    root.style.setProperty('--vt-x', x + 'px');
+    root.style.setProperty('--vt-y', y + 'px');
+    root.style.setProperty('--vt-f', feather + 'px');
+    root.style.setProperty('--vt-end', (reach + feather) + 'px');
+    root.classList.add('theme-vt');
+    let vt;
+    try { vt = document.startViewTransition(() => applyTheme(next)); }
+    catch (e) { root.classList.remove('theme-vt'); applyTheme(next); return; }
+    vt.finished.finally(() => root.classList.remove('theme-vt'));
   });
 }
 
