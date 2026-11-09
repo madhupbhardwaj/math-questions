@@ -1,7 +1,12 @@
 // ============================================================
 // CONFIG — edit these to change data source or topics
 // ============================================================
-const SHEET_CSV_URL = window.PS_SHEET_CSV_URL || "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
+// Live copy of the sheet (needs "Anyone with the link: Viewer"): edits show up
+// within seconds. The "Publish to web" copy is the automatic fallback; Google
+// refreshes that one only every ~5 minutes.
+const SHEET_LIVE_CSV_URL = "https://docs.google.com/spreadsheets/d/1M8z8EGcB6uo_P_IzucqIjjoEPRByeSBhByEI98ckxpQ/export?format=csv&gid=1277823553";
+const SHEET_PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
+const SHEET_CSV_URL = window.PS_SHEET_CSV_URL || SHEET_LIVE_CSV_URL;
 const SHOW_IMAGES = false; // set to true to bring images back
 const SHOW_DONATION = true; // set to false to hide the "Support this project" card
 const SHOW_PROGRESS = true; // set to false to hide "Mark solved" buttons and the solved counter
@@ -149,24 +154,35 @@ function parseCsv(text) {
   });
 }
 
-// Fetch the published sheet with a time limit, retrying briefly on failure.
-async function fetchCsvWithRetry(retries = 1, delayMs = 600, timeoutMs = 8000) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+// True if the text is our questions table (and not, say, a Google sign-in
+// page returned because the sheet's sharing was switched off).
+function looksLikeSheet(text) {
+  const firstLine = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0];
+  return /(^|,)"?Topic"?(,|$)/.test(firstLine) && /(^|,)"?Question"?(,|$)/.test(firstLine);
+}
+
+// Fetch the sheet with a time limit: the live copy first, then the
+// published copy as a fallback.
+async function fetchCsvWithRetry(timeoutMs = 8000) {
+  const urls = [SHEET_CSV_URL, SHEET_PUBLISHED_CSV_URL].filter((u, i, a) => u && a.indexOf(u) === i);
+  let lastErr;
+  for (const url of urls) {
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
     try {
-      const res = await fetch(SHEET_CSV_URL, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
+      const res = await fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      if (!text || text.trim().length === 0) throw new Error("Empty response");
+      if (!looksLikeSheet(text)) throw new Error("Not the questions sheet");
       return text;
     } catch (err) {
-      if (attempt === retries) throw err;
-      await new Promise(r => setTimeout(r, delayMs));
+      lastErr = err;
+      console.warn(`Sheet fetch failed (${url === SHEET_PUBLISHED_CSV_URL ? 'published' : 'live'} copy):`, err);
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
+  throw lastErr;
 }
 
 function readCachedData() {
@@ -183,7 +199,9 @@ function fetchFreshData() {
   if (!_freshDataPromise) {
     let textPromise = window.__psCsv;
     window.__psCsv = null;
-    textPromise = textPromise ? textPromise.catch(() => fetchCsvWithRetry()) : fetchCsvWithRetry();
+    textPromise = textPromise
+      ? textPromise.then(t => (looksLikeSheet(t) ? t : fetchCsvWithRetry()), () => fetchCsvWithRetry())
+      : fetchCsvWithRetry();
     _freshDataPromise = textPromise.then(text => {
       const data = buildDataFromRows(parseCsv(text));
       try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}

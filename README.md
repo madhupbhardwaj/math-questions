@@ -13,3 +13,15 @@ Reach out to me on discord at my user ID: @madhup.bh
 Every page links them with a version number, e.g. `assets/app.js?v=20261108`.
 **Whenever you change either file, update that number in all 7 `index.html` files** (use today's date)
 so visitors get the new version immediately instead of hours later.
+
+## Where the questions come from
+
+The site reads the questions spreadsheet (tab "Form responses 1") directly:
+
+- **Live copy (used first):** `…/spreadsheets/d/1M8z8EGcB6uo_P_IzucqIjjoEPRByeSBhByEI98ckxpQ/export?format=csv&gid=1277823553`.
+  Edits appear on the site within seconds. This needs the sheet's sharing to stay on
+  **"Anyone with the link – Viewer"**.
+- **Fallback:** the "Publish to web" CSV. Keep publishing turned on; if the live copy ever fails
+  (or sharing is switched off), the site uses this one automatically, which Google refreshes about every 5 minutes.
+
+Both URLs are set at the top of `assets/app.js` (and the live one in each page's `<head>`).

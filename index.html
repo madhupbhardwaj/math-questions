@@ -12,8 +12,9 @@
 </script>
 <script>
   // Start downloading the questions immediately, in parallel with everything
-  // else (app.js picks this up). The sheet URL lives here and in app.js.
-  window.PS_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRFvuUAIJ9sPxu4uKkmBmP3GMlyRKhnYbp_L6wu7FtvI9R5SQiPfQz-kOUMTCPxhD6nXdyvER9mfTsa/pub?gid=1277823553&single=true&output=csv";
+  // else (app.js picks this up). Live sheet copy; app.js falls back to the
+  // "Publish to web" copy if this fails.
+  window.PS_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1M8z8EGcB6uo_P_IzucqIjjoEPRByeSBhByEI98ckxpQ/export?format=csv&gid=1277823553";
   try {
     window.__psCsv = fetch(window.PS_SHEET_CSV_URL, { cache: "no-store" }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
@@ -49,7 +50,7 @@
 <meta name="apple-mobile-web-app-title" content="problemset">
 <meta name="application-name" content="problemset">
 <meta name="theme-color" content="#0a0a0b">
-<link rel="stylesheet" href="assets/styles.css?v=20261109c">
+<link rel="stylesheet" href="assets/styles.css?v=20261109d">
 </head>
 <body data-accent="nt">
 <div class="bg-layer" aria-hidden="true">
@@ -193,7 +194,7 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=20261109c"></script>
+<script src="assets/app.js?v=20261109d"></script>
 <script>
   initLandingPage();
   initCursorGlow();
