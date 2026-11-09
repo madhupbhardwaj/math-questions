@@ -91,7 +91,24 @@ function autoWrapLatex(text) {
   return looksLikeLatex ? `$$${text}$$` : text;
 }
 
+// Permanent question ID. Uses an "ID" column if the sheet has one; otherwise the
+// Google Form timestamp ("dd/mm/yyyy hh:mm:ss" → "yymmdd-hhmmss"), which never
+// changes when rows are reordered; otherwise a hash of the question text.
+function questionId(row) {
+  const own = String(row["ID"] || row["Id"] || row["id"] || '').trim();
+  if (own) return own.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || own;
+  const ts = String(row["Timestamp"] || '').trim();
+  const m = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  const p2 = n => String(n).padStart(2, '0');
+  if (m) return `${m[3].slice(2)}${p2(m[2])}${p2(m[1])}-${p2(m[4])}${m[5]}${p2(m[6] || 0)}`;
+  if (ts) return 't' + ts.replace(/\D+/g, '');
+  let h = 2166136261;
+  for (const ch of String(row["Question"] || '')) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return 'h' + h.toString(36);
+}
+
 function buildDataFromRows(rows) {
+  const seen = new Set();
   const data = {};
   Object.values(TOPICS).forEach(t => {
     data[t.key] = { label: t.label, icon: t.icon, accent: t.accent, accentBg: t.accentBg, questions: [] };
@@ -103,7 +120,8 @@ function buildDataFromRows(rows) {
     if (!topic || !row["Question"]) return;
 
     data[topic.key].questions.push({
-      id: data[topic.key].questions.length, // stable position-based ID for shareable links
+      id: (() => { let id = questionId(row), k = 2; while (seen.has(id)) id = `${questionId(row)}-${k++}`; seen.add(id); return id; })(),
+      pos: data[topic.key].questions.length, // position within the topic (for old ?q=<n> links)
       q: autoWrapLatex((row["Question"] || "").trim()),
       a: autoWrapLatex((row["Answer"] || "").trim()) || "No solution provided yet.",
       difficulty: normalizeDifficulty(row["Difficulty"]),
@@ -115,7 +133,7 @@ function buildDataFromRows(rows) {
   return data;
 }
 
-const CACHE_KEY = "problemset_cache_v1";
+const CACHE_KEY = "problemset_cache_v2";   // v2: permanent string IDs
 
 // Minimal RFC 4180 CSV parser (quoted fields, "" escapes, newlines inside
 // quotes). Replaces PapaParse: one less download before questions can show.
@@ -216,17 +234,35 @@ function fetchFreshData() {
 // the last visit (if any), while the live sheet downloads in the background.
 // If the live copy differs, onUpdate(freshData) is called so the page can
 // refresh in place. With no saved copy, it simply waits for the live sheet.
+// Snapshot of the sheet written by the GitHub Action (assets/data/questions.json):
+// lets a first-time visitor see questions without waiting for Google.
+let _snapshotPromise = null;
+function fetchSnapshot() {
+  if (!_snapshotPromise) {
+    _snapshotPromise = fetch('/assets/data/questions.json', { cache: 'no-cache' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => (j && j.data ? j.data : null))
+      .catch(() => null);
+  }
+  return _snapshotPromise;
+}
+
 function loadData(onUpdate) {
   const fresh = fetchFreshData();
+  fresh.then(migrateProgress, () => {});
   const cached = readCachedData();
-  if (cached) {
-    const snapshot = JSON.stringify(cached);
-    fresh.then(data => {
-      if (onUpdate && JSON.stringify(data) !== snapshot) onUpdate(data);
-    }).catch(err => console.warn("Live refresh failed, showing saved questions:", err));
-    return Promise.resolve(cached);
-  }
-  return fresh;
+  const first = cached ? Promise.resolve(cached)
+    : fetchSnapshot().then(snap => (snap ? Promise.race([fresh.catch(() => snap), new Promise(r => setTimeout(() => r(snap), 250))]) : fresh));
+  return first.then(initial => {
+    migrateProgress(initial);
+    if (initial !== null && initial !== undefined) {
+      const snapshot = JSON.stringify(initial);
+      fresh.then(data => {
+        if (onUpdate && data !== initial && JSON.stringify(data) !== snapshot) onUpdate(data);
+      }).catch(err => console.warn("Live refresh failed, showing saved questions:", err));
+    }
+    return initial;
+  });
 }
 
 // Run once the page's deferred libraries (KaTeX) have executed.
@@ -627,7 +663,25 @@ async function copyQuestionAsImage(item, qEl, accent, topicLabel, btn) {
 // Controlled by SHOW_PROGRESS. IDs are position-based, so append new
 // questions to the END of a topic in the sheet to keep progress intact.
 // ============================================================
-const PROGRESS_KEY = "problemset_solved_v1";
+const PROGRESS_KEY = "problemset_solved_v2";       // { topicKey: [questionId, …] }
+const OLD_PROGRESS_KEY = "problemset_solved_v1";   // { topicKey: [position, …] } (before permanent IDs)
+
+// One-time move of saved ticks from row positions to permanent IDs.
+function migrateProgress(data) {
+  try {
+    if (localStorage.getItem(PROGRESS_KEY) !== null) return;
+    const old = JSON.parse(localStorage.getItem(OLD_PROGRESS_KEY) || 'null');
+    if (!old) return;
+    const next = {};
+    Object.keys(old).forEach(key => {
+      const qs = data[key] ? data[key].questions : [];
+      next[key] = (Array.isArray(old[key]) ? old[key] : [])
+        .map(pos => (qs.find(q => q.pos === pos) || qs[pos] || {}).id)
+        .filter(Boolean);
+    });
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+  } catch (e) {}
+}
 
 function readAllProgress() {
   try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; }
@@ -739,7 +793,7 @@ function renderQuestionItem(item, index, accent, topicLabel, topicKey, onProgres
   const shareBtn = qEl.querySelector('.share-btn');
   shareBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const url = `${location.origin}${location.pathname}?q=${item.id}`;
+    const url = `${location.origin}/q/${encodeURIComponent(item.id)}/`;
     try {
       await navigator.clipboard.writeText(url);
       const original = shareBtn.innerHTML;
@@ -955,7 +1009,13 @@ function initTopicPage(topicKey) {
 
       if (sharedId !== null) {
         setTimeout(() => {
-          const target = main.querySelector(`.q-item[data-qid="${sharedId}"]`);
+          let qid = sharedId;
+          // Old links used the row position (?q=3); map them to the permanent ID.
+          if (/^\d{1,3}$/.test(qid) && !allQuestions.some(q => q.id === qid)) {
+            const byPos = allQuestions.find(q => q.pos === +qid) || allQuestions[+qid];
+            if (byPos) qid = byPos.id;
+          }
+          const target = Array.from(main.querySelectorAll('.q-item')).find(el => el.dataset.qid === qid);
           if (target) {
             setQuestionOpen(target, true);
             target.classList.add('shared-highlight');
@@ -986,6 +1046,49 @@ function initTopicPage(topicKey) {
       render();
     });
   });
+}
+
+// ============================================================
+// SINGLE-QUESTION PAGE (/q/<id>/, generated by tools/build-pages.cjs)
+// The page ships with the question text in its HTML (for search engines and
+// link previews); this upgrades it to the full interactive card.
+// ============================================================
+function initQuestionPage(qid, topicKey) {
+  const main = document.getElementById('questionList');
+  const topic = Object.values(TOPICS).find(t => t.key === topicKey);
+  const headIcon = document.getElementById('topicHeadIcon');
+  if (headIcon && topic) headIcon.innerHTML = topic.icon;
+  if (!main || !topic) return;
+
+  function show(data) {
+    const qs = data[topicKey] ? data[topicKey].questions : [];
+    const idx = qs.findIndex(q => q.id === qid);
+    if (idx < 0) {
+      main.innerHTML = `<div class="empty-state">This question is no longer on problemset. <a class="inline-link" href="/${topicKey}/">See all ${topic.label} questions</a></div>`;
+      return;
+    }
+    const wasOpen = !!main.querySelector('.q-item.open');
+    const list = document.createElement('div');
+    list.className = 'question-list';
+    const el = renderQuestionItem(qs[idx], idx, topic.accent, topic.label, topicKey, null);
+    list.appendChild(el);
+    main.innerHTML = '';
+    main.appendChild(list);
+    if (wasOpen) setQuestionOpen(el, true);
+    const pos = document.getElementById('qPosition');
+    if (pos) pos.textContent = `Question ${idx + 1} of ${qs.length}`;
+    renderMath(main);
+  }
+  waitForLibs(() => {
+    renderMath(main);   // typeset the pre-rendered text right away
+    loadData(show).then(show).catch(err => console.warn('Could not load live question:', err));
+  });
+}
+
+// 404 page: the search button opens the global search.
+function initNotFoundPage() {
+  const btn = document.getElementById('nfSearch');
+  if (btn) btn.addEventListener('click', () => document.getElementById('searchTrigger')?.click());
 }
 
 // ============================================================
@@ -1328,28 +1431,32 @@ const _LATEX_WORDS = {
 };
 // Turn a question's LaTeX source into readable plain text for searching/snippets.
 function latexToPlain(src) {
-  let s = String(src || '');
+  let s = String(src || '')
+    .replace(/\\(begin|end)\s*\{[^}]*\}/g, ' ')                       // environment names
+    .replace(/\^\s*(?:\{\s*\\circ\s*\}|\\circ)/g, '°');               // degrees, before fractions
+  for (let i = 0; i < 3; i++) s = s.replace(/\\sqrt\s*\{([^{}]*)\}/g, (m, b) => (/^[\w.]+$/.test(b.trim()) ? '√' + b.trim() : '√(' + b + ')'));
   for (let i = 0; i < 3; i++) s = s.replace(/\\(?:text|textrm|mathrm|mbox|textbf|textit|operatorname)\s*\{([^{}]*)\}/g, ' $1 ');
   for (let i = 0; i < 3; i++) s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, ' ($1)/($2) ');
   // Superscripts / subscripts → real Unicode where possible (10^6 → 10⁶, S_{999} → S₉₉₉)
-  const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', 'n': 'ⁿ', 'i': 'ⁱ' };
+  const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', 'n': 'ⁿ', 'i': 'ⁱ',
+    a: 'ᵃ', b: 'ᵇ', c: 'ᶜ', d: 'ᵈ', e: 'ᵉ', k: 'ᵏ', m: 'ᵐ', p: 'ᵖ', r: 'ʳ', t: 'ᵗ', x: 'ˣ', y: 'ʸ', z: 'ᶻ', N: 'ᴺ', T: 'ᵀ' };
   const SUB = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', '+': '₊', '-': '₋', 'i': 'ᵢ', 'n': 'ₙ', 'k': 'ₖ', 'r': 'ᵣ', 'x': 'ₓ' };
   const script = (map, body, mark) => {
     const t = body.replace(/\s+/g, '');
     return [...t].every(c => c in map) ? [...t].map(c => map[c]).join('') : mark + (t.length > 1 ? '(' + t + ')' : t);
   };
-  s = s.replace(/\^\s*\{?\\circ\}?/g, '°')
+  s = s.replace(/\^\s*(?:\{\s*\\circ\s*\}|\\circ)/g, '°')
        .replace(/\^\s*\{([^{}]*)\}/g, (m, b) => script(SUP, b, '^'))
        .replace(/\^\s*([0-9A-Za-z+-])/g, (m, b) => script(SUP, b, '^'))
        .replace(/_\s*\{([^{}]*)\}/g, (m, b) => script(SUB, b, '_'))
        .replace(/_\s*([0-9A-Za-z])/g, (m, b) => script(SUB, b, '_'));
   s = s
        .replace(/\\([a-zA-Z]+)/g, (m, w) => (w in _LATEX_WORDS ? ' ' + _LATEX_WORDS[w] + ' ' : ' '))
-       .replace(/\\./g, ' ')
+       .replace(/\\[\s\S]/g, ' ')
        .replace(/\$+/g, ' ')
        .replace(/[{}&]/g, ' ')
-       .replace(/[\^_]/g, '')
-       .replace(/\(\s*([^()\s]+)\s*\)\/\(\s*([^()\s]+)\s*\)/g, '$1/$2')
+       .replace(/_(?=\()/g, '_').replace(/\^\s+/g, '^')
+       .replace(/\(\s*([A-Za-z0-9.\u0370-\u03ff]+)\s*\)\/\(\s*([A-Za-z0-9.\u0370-\u03ff]+)\s*\)/g, '$1/$2')
        .replace(/\s+([,.;:?)])/g, '$1').replace(/\(\s+/g, '(')
        .replace(/\s+([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿⁱ₀₁₂₃₄₅₆₇₈₉₊₋ᵢₙₖᵣₓ])/g, '$1')
        .replace(/\s+/g, ' ').trim();
