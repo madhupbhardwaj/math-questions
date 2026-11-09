@@ -1149,3 +1149,45 @@ html.cursor-text .cursor-dot, html.cursor-text .cursor-ring { opacity: 0 !import
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ==========================================================================
+   SINGLE-QUESTION PAGES (/q/<id>/) + STATIC LISTS + 404
+   ========================================================================== */
+.page-question .question-list { padding-top: 22px; }
+.q-page-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+/* Plain list in the topic page HTML (for search engines / no JavaScript);
+   replaced by the interactive list as soon as the page loads. */
+.q-static-list { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 0 22px; color: var(--text-dim); }
+.q-static-list a { color: var(--text); text-decoration: none; }
+.q-static-list a:hover { text-decoration: underline; }
+
+.page-404 { display: flex; align-items: center; min-height: calc(100vh - 64px - 260px); padding-top: 48px; padding-bottom: 72px; }
+.nf { max-width: 640px; }
+.nf-code {
+  display: flex; gap: 6px; margin-bottom: 18px;
+  font-family: var(--mono); font-size: clamp(64px, 12vw, 112px); font-weight: 700; line-height: 1;
+  letter-spacing: -0.04em; color: var(--text);
+}
+.nf-zero { position: relative; color: var(--page-accent); }
+.nf-zero::after {           /* the "0" crossed out like ∅ / division by zero */
+  content: ''; position: absolute; left: 8%; right: 8%; top: 50%; height: 0.07em;
+  background: var(--page-accent); transform: rotate(-58deg); border-radius: 2px;
+}
+.nf h1 { font-size: clamp(30px, 5vw, 46px); }
+.nf .lede { margin-top: 14px; }
+.nf-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.nf-topics { margin-top: 40px; }
+.nf-topics-label { font-size: 13px; color: var(--text-faint); margin-bottom: 10px; }
+.nf-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.nf-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 14px 0 8px;
+  border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--surface); box-shadow: var(--shadow-1);
+  color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 500;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.nf-chip:hover { border-color: color-mix(in srgb, var(--card-accent) 55%, var(--border)); transform: translateY(-1px); }
+.nf-chip-ic { display: inline-flex; color: var(--card-accent); }
+.nf-chip-ic svg { width: 20px; height: 20px; }
