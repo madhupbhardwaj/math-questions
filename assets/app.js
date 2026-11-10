@@ -1742,10 +1742,34 @@ function initThemeToggle() {
     const x = r.left + r.width / 2, y = r.top + r.height / 2;
     const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
     const feather = Math.max(120, reach * 0.28);
-    root.style.setProperty('--vt-x', x + 'px');
-    root.style.setProperty('--vt-y', y + 'px');
-    root.style.setProperty('--vt-f', feather + 'px');
-    root.style.setProperty('--vt-end', (reach + feather) + 'px');
+    const R = reach + feather, D = 2 * R;
+    const solid = (reach / R * 100).toFixed(2);
+    const px = n => n.toFixed(1) + 'px';
+    // All numbers are written out literally (no CSS variables or @property):
+    // Safari doesn't animate custom properties on view-transition layers,
+    // which showed the new theme for one frame before the wave started.
+    // The circle grows by animating mask-size/mask-position, which every
+    // browser with view transitions animates natively.
+    const css = `
+html.theme-vt::view-transition-new(root){
+  -webkit-mask-image:radial-gradient(circle closest-side,#000 ${solid}%,transparent 100%);
+          mask-image:radial-gradient(circle closest-side,#000 ${solid}%,transparent 100%);
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-size:0 0; mask-size:0 0;
+  -webkit-mask-position:${px(x)} ${px(y)}; mask-position:${px(x)} ${px(y)};
+  animation:theme-wave .7s cubic-bezier(.45,0,.2,1) both;
+}
+@keyframes theme-wave{
+  from{-webkit-mask-size:0 0;mask-size:0 0;-webkit-mask-position:${px(x)} ${px(y)};mask-position:${px(x)} ${px(y)}}
+  to{-webkit-mask-size:${px(D)} ${px(D)};mask-size:${px(D)} ${px(D)};-webkit-mask-position:${px(x - R)} ${px(y - R)};mask-position:${px(x - R)} ${px(y - R)}}
+}`;
+    let style = document.getElementById('themeWaveStyle');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'themeWaveStyle';
+      document.head.appendChild(style);
+    }
+    style.textContent = css;
     root.classList.add('theme-vt');
     let vt;
     try { vt = document.startViewTransition(() => applyTheme(next)); }
