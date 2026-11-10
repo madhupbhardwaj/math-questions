@@ -1150,20 +1150,12 @@ html.cursor-text .cursor-dot, html.cursor-text .cursor-ring { opacity: 0 !import
    edged circle and sweeps diagonally to the bottom-left corner.
    Driven by initThemeToggle() through the View Transitions API.
    -------------------------------------------------------------------------- */
-@property --vt-p { syntax: "<length>"; inherits: false; initial-value: 0px; }
 html.theme-vt::view-transition-old(root),
 html.theme-vt::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 html.theme-vt::view-transition-old(root) { z-index: 1; }
-html.theme-vt::view-transition-new(root) {
-  z-index: 2;
-  -webkit-mask-image: radial-gradient(circle at var(--vt-x, 100%) var(--vt-y, 0%), #000 calc(var(--vt-p) - var(--vt-f, 160px)), transparent var(--vt-p));
-          mask-image: radial-gradient(circle at var(--vt-x, 100%) var(--vt-y, 0%), #000 calc(var(--vt-p) - var(--vt-f, 160px)), transparent var(--vt-p));
-  animation: theme-wave 0.7s cubic-bezier(0.45, 0, 0.2, 1) both;
-}
-@keyframes theme-wave {
-  from { --vt-p: 0px; }
-  to   { --vt-p: var(--vt-end, 150vmax); }
-}
+html.theme-vt::view-transition-new(root) { z-index: 2; }
+/* The mask and its keyframes are written by initThemeToggle() with the
+   toggle's exact position. */
 /* While the wave runs, colours change in one step (the wave is the animation) */
 html.theme-vt *:not(.liquid-toggle):not(.liquid-toggle *),
 html.theme-vt *:not(.liquid-toggle):not(.liquid-toggle *)::before,
